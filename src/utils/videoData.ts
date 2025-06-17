@@ -1,32 +1,26 @@
-// src/utils/videoData.ts
 import path from 'path';
 import fs from 'fs/promises';
 import { createReadStream } from 'fs';
 import csv from 'csv-parser';
 import sharp from 'sharp';
 import fetch from 'node-fetch';
-import { Buffer } from 'buffer'; // Penting: Import Buffer
+import { Buffer } from 'buffer';
 
-// Definisikan interface VideoData
 export interface VideoData {
   id: string;
   title: string;
   description: string;
-  thumbnail: string; // Ini akan menjadi path thumbnail lokal WebP
-  thumbAsli: string; // Ini akan menjadi URL thumbnail asli dari CSV
+  thumbnail: string;
+  thumbAsli: string;
   duration: string;
   videoUrl: string;
   category: string;
 }
 
-// Direktori untuk menyimpan thumbnail lokal
 const THUMBNAIL_DIR = path.join(process.cwd(), 'public', 'thumbnails');
-// Base URL untuk thumbnail lokal
 const THUMBNAIL_BASE_URL = '/thumbnails/';
-// Placeholder jika thumbnail gagal diunduh atau tidak ada
 const PLACEHOLDER_THUMBNAIL = '/placeholder.webp';
 
-// Fungsi helper untuk memastikan direktori ada
 async function ensureDirExists(dirPath: string) {
   try {
     await fs.access(dirPath);
@@ -40,22 +34,17 @@ async function ensureDirExists(dirPath: string) {
   }
 }
 
-// Fungsi untuk mengunduh dan mengkonversi gambar ke WebP
 async function processThumbnail(videoId: string, thumbnailUrl: string): Promise<string | null> {
   const outputFileName = `${videoId}.webp`;
   const outputPath = path.join(THUMBNAIL_DIR, outputFileName);
   const publicPath = THUMBNAIL_BASE_URL + outputFileName;
 
-  // Cek apakah thumbnail sudah ada secara lokal
   try {
     await fs.access(outputPath);
-    // console.log(`[INFO] Thumbnail untuk ID ${videoId} sudah ada secara lokal.`);
     return publicPath;
   } catch {
-    // Lanjutkan jika file tidak ditemukan
   }
 
-  // Jika tidak ada, unduh dan proses
   try {
     console.log(`[INFO] Mengunduh & mengkonversi thumbnail untuk ID ${videoId} dari: ${thumbnailUrl}`);
     const response = await fetch(thumbnailUrl);
@@ -68,10 +57,9 @@ async function processThumbnail(videoId: string, thumbnailUrl: string): Promise<
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Konversi ke WebP dan simpan
     await sharp(buffer)
-      .resize(320) // Sesuaikan ukuran (lebar) sesuai kebutuhan Anda
-      .webp({ quality: 80 }) // Kualitas WebP (0-100)
+      .resize(320)
+      .webp({ quality: 80 })
       .toFile(outputPath);
 
     console.log(`[INFO] Thumbnail untuk ID ${videoId} berhasil disimpan di: ${outputPath}`);
@@ -82,7 +70,6 @@ async function processThumbnail(videoId: string, thumbnailUrl: string): Promise<
   }
 }
 
-// Fungsi untuk membaca semua video dari CSV dan memproses thumbnail
 export async function getAllVideos(): Promise<VideoData[]> {
   const results: VideoData[] = [];
   const csvFilePath = path.resolve(process.cwd(), 'src/data/videos.csv');
@@ -94,22 +81,21 @@ export async function getAllVideos(): Promise<VideoData[]> {
     console.log(`[DEBUG_VIDEO_DATA] CSV file exists: ${csvFilePath}`);
   } catch (err) {
     console.error(`[ERROR_VIDEO_DATA] CSV file does not exist or is unreadable: ${csvFilePath}`, err);
-    return []; // Mengembalikan array kosong jika file tidak ditemukan/dibaca
+    return [];
   }
 
-  await ensureDirExists(THUMBNAIL_DIR); // Pastikan direktori thumbnail ada sebelum memulai
+  await ensureDirExists(THUMBNAIL_DIR);
 
   return new Promise((resolve, reject) => {
     createReadStream(csvFilePath)
-      .pipe(csv({ separator: ';' })) // Pastikan separator sesuai dengan file CSV Anda
+      .pipe(csv({ separator: ';' }))
       .on('data', async (data: any) => {
-        // Sanitasi data: pastikan semua kolom ada dan tidak null/undefined
         const videoData: VideoData = {
           id: data.id || '',
           title: data.title || 'Judul Tidak Diketahui',
           description: data.description || 'Deskripsi tidak tersedia.',
           thumbnail: data.thumbnail || '',
-          thumbAsli: data.thumbnail || '', // Awalnya sama dengan thumbnail
+          thumbAsli: data.thumbnail || '',
           duration: data.duration || '10',
           videoUrl: data.videoUrl || '',
           category: data.category || 'Umum',
@@ -137,8 +123,7 @@ export async function getAllVideos(): Promise<VideoData[]> {
   });
 }
 
-// Fungsi untuk mendapatkan satu video berdasarkan ID
 export async function getVideoById(id: string): Promise<VideoData | undefined> {
-  const allVideos = await getAllVideos(); // Dapatkan semua video
-  return allVideos.find(video => video.id === id); // Cari video berdasarkan ID
+  const allVideos = await getAllVideos();
+  return allVideos.find(video => video.id === id);
 }
