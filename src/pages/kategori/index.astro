@@ -1,110 +1,41 @@
 ---
-import Layout from '../../layouts/BaseLayout.astro';
-import path from 'path';
-import { createReadStream } from 'fs'; // Use createReadStream for csv-parser
-import csv from 'csv-parser';
-import { slugify } from '../../utils/slugify';
-
-interface VideoData {
-  id: string;
-  title: string;
-  description: string;
-  thumbnail: string;
-  thumbAsli: string;
-  duration: string;
-  videoUrl: string;
-  category: string;
-}
-
-async function getAllVideosForCategories(): Promise<VideoData[]> {
-  const results: VideoData[] = [];
-  const csvFilePath = path.resolve(process.cwd(), 'src/data/videos.csv');
-
-  return new Promise((resolve, reject) => {
-    createReadStream(csvFilePath)
-      .pipe(csv({ separator: ';' }))
-      .on('data', (data: VideoData) => results.push(data))
-      .on('end', () => {
-        console.log(`[INFO] Selesai membaca CSV untuk daftar kategori. Total video: ${results.length}`);
-        resolve(results);
-      })
-      .on('error', (error) => {
-        console.error("[ERROR] Gagal membaca file CSV untuk daftar kategori:", error);
-        reject(error);
-      });
-  });
-}
-
-const allVideos = await getAllVideosForCategories();
-const uniqueCategories = [...new Set(allVideos.map(video => video.category.trim()))].sort();
-
-// Mendapatkan domain unik dari URL video untuk preconnect
-const allDomains = new Set<string>();
-allVideos.forEach(video => {
-  try {
-    allDomains.add(new URL(video.videoUrl).origin);
-  } catch (e) {
-    console.error(`[ERROR] URL video tidak valid di CSV untuk video ID ${video.id}:`, e);
-  }
-});
-const preconnectDomains = Array.from(allDomains);
-
-const breadcrumbs = [
-  { name: 'Beranda', url: '/' },
-  { name: 'Kategori', url: '/kategori/' },
-];
+// src/pages/kategori/index.astro
+import Layout from '@layouts/BaseLayout.astro';
+import CategoryList from '@components/CategoryList.astro';
 ---
 
 <Layout
   title="Semua Kategori Video"
-  description="Daftar semua kategori video yang tersedia di portal ini."
-  preconnectDomains={preconnectDomains}
+  description="Daftar lengkap kategori video yang tersedia di portal kami."
 >
-  <main class="categories-page">
+  <main class="categories-index-page container">
     <nav class="breadcrumb" aria-label="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList">
       <ol>
-        {breadcrumbs.map((item, index) => (
-          <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
-            {index > 0 && <span class="separator">/</span>}
-            {item.url ? (
-              <a itemprop="item" href={item.url}>
-                <span itemprop="name">{item.name}</span>
-              </a>
-            ) : (
-              <span itemprop="name">{item.name}</span>
-            )}
-            <meta itemprop="position" content={(index + 1).toString()} />
-          </li>
-        ))}
+        <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+          <a itemprop="item" href="/">
+            <span itemprop="name">Beranda</span>
+          </a>
+          <span class="separator">/</span>
+          <meta itemprop="position" content="1" />
+        </li>
+        <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+          <span itemprop="name">Kategori</span>
+          <meta itemprop="position" content="2" />
+        </li>
       </ol>
     </nav>
 
     <section class="categories-header">
-      <h1>Daftar Kategori</h1>
-      <p>Jelajahi video berdasarkan kategori yang Anda minati.</p>
+      <h1>Jelajahi Berdasarkan Kategori</h1>
+      <p>Temukan video favorit Anda dengan menelusuri kategori di bawah ini.</p>
     </section>
 
-    <section class="categories-list-section">
-      {uniqueCategories.length === 0 ? (
-        <p class="no-categories">Belum ada kategori yang tersedia.</p>
-      ) : (
-        <ul class="categories-list">
-          {uniqueCategories.map(category => (
-            <li>
-              <a href={`/kategori/${slugify(category)}/`} class="category-item-link">
-                {category} ({allVideos.filter(v => v.category === category).length} video)
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    <CategoryList />
   </main>
 </Layout>
 
 <style>
-  .categories-page {
-    max-width: 1200px;
+  .categories-index-page {
     margin: 30px auto;
     padding: 20px;
     background-color: #fff;
@@ -116,119 +47,29 @@ const breadcrumbs = [
     text-align: center;
     margin-bottom: 40px;
     padding: 40px 20px;
-    background: linear-gradient(to right, #28a745, #218838); /* Accent color for categories list header */
+    background: linear-gradient(to right, var(--secondary-color), #495057);
     color: white;
     border-radius: 8px;
     box-shadow: var(--shadow-medium);
   }
 
   .categories-header h1 {
-    font-size: clamp(2.5em, 5vw, 4em);
+    font-size: clamp(2em, 4vw, 3.5em);
     margin-bottom: 10px;
     line-height: 1.2;
   }
 
   .categories-header p {
-    font-size: clamp(1em, 2.5vw, 1.5em);
+    font-size: clamp(0.9em, 2vw, 1.2em);
     opacity: 0.9;
   }
 
-  .categories-list-section {
-    margin-top: 50px;
-  }
-
-  .categories-list {
-    list-style: none;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-  }
-
-  .categories-list li {
-    background-color: var(--card-bg);
-    border-radius: 8px;
-    box-shadow: var(--shadow-light);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .categories-list li:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-  }
-
-  .category-item-link {
-    display: block;
-    padding: 20px;
-    text-decoration: none;
-    color: var(--text-color);
-    font-weight: 600;
-    font-size: 1.1em;
-    text-align: center;
-    transition: color 0.2s ease;
-  }
-
-  .category-item-link:hover {
-    color: var(--primary-color);
-  }
-
-  .no-categories {
-    text-align: center;
-    font-size: 1.2em;
-    color: #999;
-    padding: 50px 0;
-    grid-column: 1 / -1;
-  }
-
-  .breadcrumb {
-    margin-bottom: 20px;
-    font-size: 0.9em;
-    color: #666;
-  }
-
-  .breadcrumb ol {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-  }
-
-  .breadcrumb li {
-    display: flex;
-    align-items: center;
-  }
-
-  .breadcrumb a {
-    color: var(--primary-color);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .breadcrumb a:hover {
-    text-decoration: underline;
-  }
-
-  .breadcrumb .separator {
-    margin: 0 8px;
-    color: #999;
-  }
-
   @media (max-width: 768px) {
-    .categories-list {
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    }
-    .categories-page {
+    .categories-index-page {
       padding: 15px;
     }
     .categories-header {
       padding: 30px 15px;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .categories-list {
-      grid-template-columns: 1fr;
     }
   }
 </style>

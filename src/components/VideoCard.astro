@@ -1,6 +1,5 @@
 ---
 // src/components/VideoCard.astro
-// Menggunakan interface VideoData yang diimpor dari videoData.ts
 import type { VideoData } from '@utils/videoData';
 
 interface Props {
@@ -8,49 +7,32 @@ interface Props {
 }
 
 const { video } = Astro.props;
-
-// Fungsi untuk format durasi (bisa dipindah ke utils jika sering dipakai)
-function formatDuration(secondsStr: string): string {
-  const totalSeconds = parseInt(secondsStr, 10);
-  if (isNaN(totalSeconds) || totalSeconds < 0) {
-    return 'N/A';
-  }
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const remainingSeconds = totalSeconds % 60;
-
-  let formatted = '';
-  if (hours > 0) {
-    formatted += `${hours}:`;
-  }
-  formatted += `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  return formatted;
-}
 ---
 
-<a href={`/video/${video.id}/`} class="video-card">
-  <div class="thumbnail-container">
+<a href={video.videoUrl} target="_blank" rel="noopener noreferrer" class="video-card">
+  <div class="video-thumbnail">
     <img src={video.thumbnail} alt={video.title} loading="lazy" width="320" height="180" />
-    <span class="duration">{formatDuration(video.duration)}</span>
+    <span class="video-duration">{video.duration}</span>
   </div>
   <div class="video-info">
-    <h3>{video.title}</h3>
-    <p class="category">{video.category}</p>
-    <p class="description">{video.description}</p>
+    <h3 class="video-title">{video.title}</h3>
+    <p class="video-description">{video.description}</p>
+    <span class="video-category">{video.category}</span>
   </div>
 </a>
 
 <style>
   .video-card {
-    display: flex;
-    flex-direction: column;
     background-color: var(--card-bg);
     border-radius: 8px;
     box-shadow: var(--shadow-light);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
     text-decoration: none;
     color: var(--text-color);
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    height: 100%; /* Memastikan semua kartu memiliki tinggi yang sama dalam grid */
   }
 
   .video-card:hover {
@@ -58,29 +40,24 @@ function formatDuration(secondsStr: string): string {
     box-shadow: var(--shadow-medium);
   }
 
-  .thumbnail-container {
+  .video-thumbnail {
     position: relative;
     width: 100%;
-    padding-bottom: 56.25%; /* Rasio aspek 16:9 */
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
     overflow: hidden;
-    background-color: #f0f0f0; /* Placeholder background */
   }
 
-  .thumbnail-container img {
+  .video-thumbnail img {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
+    display: block; /* Menghilangkan spasi ekstra di bawah gambar */
   }
 
-  .video-card:hover .thumbnail-container img {
-    transform: scale(1.05);
-  }
-
-  .duration {
+  .video-duration {
     position: absolute;
     bottom: 8px;
     right: 8px;
@@ -89,54 +66,48 @@ function formatDuration(secondsStr: string): string {
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.8em;
-    font-weight: 600;
+    font-weight: bold;
+    user-select: none; /* Mencegah teks durasi terseleksi */
   }
 
   .video-info {
     padding: 15px;
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
   }
 
-  .video-info h3 {
-    font-size: 1.2em;
-    margin-top: 0;
-    margin-bottom: 10px;
-    line-height: 1.3;
+  .video-title {
+    font-size: 1.15em;
+    margin-bottom: 8px;
     color: var(--primary-color);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Batasi judul hingga 2 baris */
+    -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
   }
 
-  .video-info .category {
-    font-size: 0.85em;
-    color: #6c757d;
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    font-weight: 600;
-  }
-
-  .video-info .description {
+  .video-description {
     font-size: 0.9em;
     color: #666;
-    margin-top: 0;
+    margin-bottom: 10px;
+    flex-grow: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* Batasi deskripsi hingga 3 baris */
+    -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
   }
 
-  @media (max-width: 768px) {
-    .video-info h3 {
-      font-size: 1.1em;
-    }
-    .video-info .description {
-      font-size: 0.85em;
-    }
+  .video-category {
+    font-size: 0.8em;
+    color: #fff;
+    background-color: var(--accent-color);
+    padding: 4px 8px;
+    border-radius: 4px;
+    align-self: flex-start;
+    margin-top: auto;
   }
 </style>

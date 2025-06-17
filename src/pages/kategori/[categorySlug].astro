@@ -7,24 +7,19 @@ import { getAllVideos } from '@utils/videoData';
 
 export async function getStaticPaths() {
   const allVideos = await getAllVideos();
-  console.log(`[DEBUG_CATEGORY] All videos fetched for categories: ${allVideos.length}`);
 
   if (allVideos.length === 0) {
-    console.error(`[ERROR_CATEGORY] No videos found for categories. Check CSV!`);
     return [];
   }
 
   const uniqueCategories = [...new Set(allVideos.map((video) => video.category.trim()))];
-  console.log(`[DEBUG_CATEGORY] Unique categories found:`, uniqueCategories);
-
   const paths = [];
+
   for (const category of uniqueCategories) {
     const categorySlug = slugify(category);
     const videosInCategory = allVideos.filter(video => slugify(video.category) === categorySlug);
 
     videosInCategory.sort((a, b) => parseInt(b.id) - parseInt(a.id));
-
-    console.log(`[DEBUG_CATEGORY] Category "${category}" (${categorySlug}) has ${videosInCategory.length} videos.`);
 
     if (videosInCategory.length > 0) {
       paths.push({
@@ -34,11 +29,8 @@ export async function getStaticPaths() {
           videos: videosInCategory
         }
       });
-    } else {
-      console.warn(`[WARN_CATEGORY] Category "${category}" has no videos after filtering. This category page will not be generated.`);
     }
   }
-  console.log(`[DEBUG_CATEGORY] Total category paths generated (no pagination): ${paths.length}`);
   return paths;
 }
 
@@ -55,35 +47,34 @@ currentVideos.forEach(video => {
   }
 });
 const preconnectDomains = Array.from(allDomains);
-
-const breadcrumbs = [
-  { name: 'Beranda', url: '/' },
-  { name: 'Kategori', url: '/kategori/' },
-  { name: originalCategoryName, url: `/kategori/${categorySlug}/` },
-];
 ---
 
 <Layout
-  title={`${originalCategoryName} Video`}
+  title={`${originalCategoryName} Video - Portal Video`}
   description={`Jelajahi semua video tentang ${originalCategoryName}.`}
   preconnectDomains={preconnectDomains}
 >
-  <main class="category-page">
+  <main class="category-page container">
     <nav class="breadcrumb" aria-label="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList">
       <ol>
-        {breadcrumbs.map((item, index) => (
-          <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
-            {index > 0 && <span class="separator">/</span>}
-            {item.url ? (
-              <a itemprop="item" href={item.url}>
-                <span itemprop="name">{item.name}</span>
-              </a>
-            ) : (
-              <span itemprop="name">{item.name}</span>
-            )}
-            <meta itemprop="position" content={(index + 1).toString()} />
-          </li>
-        ))}
+        <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+          <a itemprop="item" href="/">
+            <span itemprop="name">Beranda</span>
+          </a>
+          <span class="separator">/</span>
+          <meta itemprop="position" content="1" />
+        </li>
+        <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+          <a itemprop="item" href="/kategori/">
+            <span itemprop="name">Kategori</span>
+          </a>
+          <span class="separator">/</span>
+          <meta itemprop="position" content="2" />
+        </li>
+        <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+          <span itemprop="name">{originalCategoryName}</span>
+          <meta itemprop="position" content="3" />
+        </li>
       </ol>
     </nav>
 
@@ -108,7 +99,6 @@ const breadcrumbs = [
 
 <style>
   .category-page {
-    max-width: 1200px;
     margin: 30px auto;
     padding: 20px;
     background-color: #fff;
@@ -120,7 +110,7 @@ const breadcrumbs = [
     text-align: center;
     margin-bottom: 40px;
     padding: 40px 20px;
-    background: linear-gradient(to right, #6c757d, #495057);
+    background: linear-gradient(to right, var(--secondary-color), #495057);
     color: white;
     border-radius: 8px;
     box-shadow: var(--shadow-medium);
@@ -145,40 +135,6 @@ const breadcrumbs = [
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 25px;
-  }
-
-  .breadcrumb {
-    margin-bottom: 20px;
-    font-size: 0.9em;
-    color: #666;
-  }
-
-  .breadcrumb ol {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-  }
-
-  .breadcrumb li {
-    display: flex;
-    align-items: center;
-  }
-
-  .breadcrumb a {
-    color: var(--primary-color);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .breadcrumb a:hover {
-    text-decoration: underline;
-  }
-
-  .breadcrumb .separator {
-    margin: 0 8px;
-    color: #999;
   }
 
   .no-videos {

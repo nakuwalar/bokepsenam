@@ -2,7 +2,6 @@
 // src/pages/index.astro
 import Layout from '@layouts/BaseLayout.astro';
 import VideoCard from '@components/VideoCard.astro';
-import { slugify } from '@utils/slugify';
 import { getAllVideos } from '@utils/videoData';
 
 export async function getStaticPaths() {
@@ -12,7 +11,7 @@ export async function getStaticPaths() {
 const allVideos = await getAllVideos();
 allVideos.sort((a, b) => parseInt(b.id) - parseInt(a.id));
 
-const currentVideos = allVideos;
+const currentVideos = allVideos; // Semua video akan ditampilkan di halaman utama
 
 const allDomains = new Set<string>();
 currentVideos.forEach(video => {
@@ -23,33 +22,22 @@ currentVideos.forEach(video => {
   }
 });
 const preconnectDomains = Array.from(allDomains);
-
-const breadcrumbs = [
-  { name: 'Beranda', url: '/' },
-];
 ---
 
 <Layout
-  title="Video Portal - Koleksi Video Terbaik"
+  title="Video Portal - Koleksi Video Terbaru"
   description="Jelajahi koleksi video terbaru dan terpopuler dari berbagai kategori."
   preconnectDomains={preconnectDomains}
 >
-  <main class="home-page">
+  <main class="home-page container">
     <nav class="breadcrumb" aria-label="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList">
       <ol>
-        {breadcrumbs.map((item, index) => (
-          <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
-            {index > 0 && <span class="separator">/</span>}
-            {item.url ? (
-              <a itemprop="item" href={item.url}>
-                <span itemprop="name">{item.name}</span>
-              </a>
-            ) : (
-              <span itemprop="name">{item.name}</span>
-            )}
-            <meta itemprop="position" content={(index + 1).toString()} />
-          </li>
-        ))}
+        <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+          <a itemprop="item" href="/">
+            <span itemprop="name">Beranda</span>
+          </a>
+          <meta itemprop="position" content="1" />
+        </li>
       </ol>
     </nav>
 
@@ -75,7 +63,6 @@ const breadcrumbs = [
 
 <style>
   .home-page {
-    max-width: 1200px;
     margin: 30px auto;
     padding: 20px;
     background-color: #fff;
@@ -133,40 +120,6 @@ const breadcrumbs = [
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 25px;
-  }
-
-  .breadcrumb {
-    margin-bottom: 20px;
-    font-size: 0.9em;
-    color: #666;
-  }
-
-  .breadcrumb ol {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-  }
-
-  .breadcrumb li {
-    display: flex;
-    align-items: center;
-  }
-
-  .breadcrumb a {
-    color: var(--primary-color);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .breadcrumb a:hover {
-    text-decoration: underline;
-  }
-
-  .breadcrumb .separator {
-    margin: 0 8px;
-    color: #999;
   }
 
   .no-videos {

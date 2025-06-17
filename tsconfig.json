@@ -1,35 +1,32 @@
 {
-  "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "jsx": "react-jsx",
-    "jsxImportSource": "react",
+    "baseUrl": ".",
+    "paths": {
+      "@layouts/*": ["src/layouts/*"],
+      "@components/*": ["src/components/*"],
+      "@utils/*": ["src/utils/*"],
+      "@data/*": ["src/data/*"]
+    },
     "allowJs": true,
-    "checkJs": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "strict": true,
-    "noEmit": true,
     "isolatedModules": true,
-    "paths": {
-      "@components/*": ["src/components/*"],
-      "@layouts/*": ["src/layouts/*"],
-      "@data/*": ["src/data/*"],
-      "@utils/*": ["src/utils/*"],
-      "@pages/*": ["src/pages/*"]
-    },
-    "include": [
-      "src/**/*",
-      "public/**/*",
-      "env.d.ts"
-    ],
-    "exclude": [
-      "node_modules",
-      "dist"
-    ]
-  }
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "moduleResolution": "node",
+    "module": "es2022",
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2022"
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.astro",
+    "src/**/*.js",
+    "src/**/*.jsx"
+  ]
 }
