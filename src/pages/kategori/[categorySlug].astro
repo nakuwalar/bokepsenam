@@ -5,7 +5,7 @@ import VideoCard from '@components/VideoCard.astro';
 import { slugify } from '@utils/slugify';
 import { getAllVideos } from '@utils/videoData';
 
-export async function getStaticPaths({ paginate }) {
+export async function getStaticPaths() {
   const allVideos = await getAllVideos();
   console.log(`[DEBUG_CATEGORY] All videos fetched for categories: ${allVideos.length}`);
 
@@ -27,27 +27,30 @@ export async function getStaticPaths({ paginate }) {
     console.log(`[DEBUG_CATEGORY] Category "${category}" (${categorySlug}) has ${videosInCategory.length} videos.`);
 
     if (videosInCategory.length > 0) {
-        paths.push(...paginate(videosInCategory, {
-            pageSize: 9, // Jumlah video per halaman kategori
-            params: { categorySlug: categorySlug },
-            route: '/kategori/[categorySlug]/[page]', // Rute untuk halaman paginasi kategori
-            props: { originalCategoryName: category } // Teruskan nama kategori asli sebagai prop
-        }));
+      // Tidak lagi menggunakan paginate, langsung push path untuk setiap kategori
+      paths.push({
+        params: { categorySlug: categorySlug },
+        props: {
+          originalCategoryName: category,
+          videos: videosInCategory // Kirim semua video dalam kategori ini sebagai prop
+        }
+      });
     } else {
-        console.warn(`[WARN_CATEGORY] Category "${category}" has no videos after filtering. This category page will not be generated.`);
+      console.warn(`[WARN_CATEGORY] Category "${category}" has no videos after filtering. This category page will not be generated.`);
     }
   }
-  console.log(`[DEBUG_CATEGORY] Total category paginated paths generated: ${paths.length}`);
+  console.log(`[DEBUG_CATEGORY] Total category paths generated (no pagination): ${paths.length}`);
   return paths;
 }
 
-const { page, categorySlug, originalCategoryName } = Astro.props;
+// Menerima props 'videos' yang sekarang berisi semua video untuk kategori ini
+const { categorySlug, originalCategoryName, videos } = Astro.props;
 
-// Pastikan page.data selalu array, meskipun page atau page.data undefined
-const currentVideos = page?.data || [];
+// currentVideos kini adalah semua video untuk kategori ini
+const currentVideos = videos;
 
 const allDomains = new Set<string>();
-currentVideos.forEach(video => { // Gunakan currentVideos
+currentVideos.forEach(video => {
   try {
     allDomains.add(new URL(video.videoUrl).origin);
   } catch (e) {
@@ -58,14 +61,14 @@ const preconnectDomains = Array.from(allDomains);
 
 const breadcrumbs = [
   { name: 'Beranda', url: '/' },
-  { name: 'Kategori', url: '/kategori/' }, // Link ke halaman kategori (jika ada)
+  { name: 'Kategori', url: '/kategori/' },
   { name: originalCategoryName, url: `/kategori/${categorySlug}/` },
 ];
 ---
 
 <Layout
-  title={page.currentPage === 1 ? `${originalCategoryName} Video` : `${originalCategoryName} Video - Halaman ${page.currentPage}`}
-  description={`Jelajahi video tentang ${originalCategoryName}, halaman ${page.currentPage}.`}
+  title={`${originalCategoryName} Video`} // Judul statis untuk kategori
+  description={`Jelajahi semua video tentang ${originalCategoryName}.`} // Deskripsi statis
   preconnectDomains={preconnectDomains}
 >
   <main class="category-page">
@@ -84,13 +87,7 @@ const breadcrumbs = [
             <meta itemprop="position" content={(index + 1).toString()} />
           </li>
         ))}
-        {page.currentPage > 1 && (
-          <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
-            <span class="separator">/</span>
-            <span itemprop="name">Halaman {page.currentPage}</span>
-            <meta itemprop="position" content={(breadcrumbs.length + 1).toString()} />
-          </li>
-        )}
+        {/* Tidak perlu lagi menampilkan halaman di breadcrumb */}
       </ol>
     </nav>
 
@@ -110,55 +107,10 @@ const breadcrumbs = [
         )}
       </div>
 
-      <nav class="pagination-controls" aria-label="Navigasi Halaman Kategori">
-        {page.url.prev && (
-          <a href={page.url.prev} class="pagination-button prev-button">
-            &larr; Sebelumnya
-          </a>
-        )}
-        <div class="page-numbers">
-          {Array.from({ length: page.lastPage }, (_, i) => i + 1).map((pageNum) => {
-            const isCurrent = pageNum === page.currentPage;
-            const isNearCurrent = Math.abs(pageNum - page.currentPage) < 2;
-            const isEdgePage = pageNum === 1 || pageNum === page.lastPage;
-
-            let showEllipsisBefore = false;
-            let showEllipsisAfter = false;
-
-            if (page.lastPage > 7) {
-                if (pageNum === page.currentPage - 3 && page.currentPage > 1 && page.currentPage - 3 > 1) {
-                    showEllipsisBefore = true;
-                }
-                if (pageNum === page.currentPage + 3 && page.currentPage < page.lastPage && page.currentPage + 3 < page.lastPage) {
-                    showEllipsisAfter = true;
-                }
-            }
-
-            if (isCurrent || isNearCurrent || isEdgePage || showEllipsisBefore || showEllipsisAfter) {
-              return (
-                <span>
-                  {showEllipsisBefore && <span class="ellipsis">...</span>}
-                  <a
-                    href={pageNum === 1 ? `/kategori/${categorySlug}/` : `/kategori/${categorySlug}/${pageNum}/`}
-                    class={`page-number ${isCurrent ? 'active' : ''}`}
-                    aria-current={isCurrent ? 'page' : undefined}
-                  >
-                    {pageNum}
-                  </a>
-                  {showEllipsisAfter && <span class="ellipsis">...</span>}
-                </span>
-              );
-            } else {
-              return null;
-            }
-          })}
-        </div>
-        {page.url.next && (
-          <a href={page.url.next} class="pagination-button next-button">
-            Selanjutnya &rarr;
-          </a>
-        )}
-      </nav>
+      {/* Kontrol Paginasi Dihapus Sepenuhnya */}
+      {/* <nav class="pagination-controls" aria-label="Navigasi Halaman Kategori">
+        ... (kode paginasi sebelumnya) ...
+      </nav> */}
     </section>
   </main>
 </Layout>
@@ -247,17 +199,18 @@ const breadcrumbs = [
     padding: 50px 0;
   }
 
+  /* Gaya Paginasi Dihapus */
   /* --- Gaya Paginasi (sama dengan index.astro) --- */
-  .pagination-controls {
+  /* .pagination-controls {
     display: flex;
     justify-content: center;
     align-items: center;
     margin-top: 50px;
     gap: 15px;
     flex-wrap: wrap;
-  }
+  } */
 
-  .pagination-button {
+  /* .pagination-button {
     display: inline-flex;
     align-items: center;
     padding: 10px 20px;
@@ -268,27 +221,27 @@ const breadcrumbs = [
     font-weight: 500;
     transition: background-color 0.2s ease-in-out, transform 0.2s ease;
     box-shadow: var(--shadow-light);
-  }
+  } */
 
-  .pagination-button:hover {
+  /* .pagination-button:hover {
     background-color: #0056b3;
     transform: translateY(-2px);
-  }
+  } */
 
-  .pagination-button.prev-button {
+  /* .pagination-button.prev-button {
     margin-right: auto;
-  }
+  } */
 
-  .pagination-button.next-button {
+  /* .pagination-button.next-button {
     margin-left: auto;
-  }
+  } */
 
-  .page-numbers {
+  /* .page-numbers {
     display: flex;
     gap: 8px;
-  }
+  } */
 
-  .page-number {
+  /* .page-number {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -302,33 +255,33 @@ const breadcrumbs = [
     color: var(--text-color);
     font-weight: 500;
     transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-  }
+  } */
 
-  .page-number:hover {
+  /* .page-number:hover {
     background-color: #e9ecef;
     border-color: var(--primary-color);
-  }
+  } */
 
-  .page-number.active {
+  /* .page-number.active {
     background-color: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
     cursor: default;
     font-weight: bold;
     box-shadow: var(--shadow-light);
-  }
+  } */
 
-  .page-number.active:hover {
+  /* .page-number.active:hover {
     background-color: var(--primary-color);
     color: white;
-  }
+  } */
 
-  .ellipsis {
+  /* .ellipsis {
     padding: 0 5px;
     color: #888;
     font-size: 1.2em;
     font-weight: bold;
-  }
+  } */
 
   @media (max-width: 768px) {
     .video-grid {
@@ -340,7 +293,8 @@ const breadcrumbs = [
     .category-header {
       padding: 30px 15px;
     }
-    .pagination-controls {
+    /* Paginasi mobile juga dihapus */
+    /* .pagination-controls {
       gap: 10px;
       justify-content: space-between;
     }
@@ -355,7 +309,7 @@ const breadcrumbs = [
       min-width: 35px;
       height: 35px;
       font-size: 0.9em;
-    }
+    } */
   }
 
   @media (max-width: 480px) {

@@ -2,35 +2,25 @@
 // src/pages/index.astro
 import Layout from '@layouts/BaseLayout.astro';
 import VideoCard from '@components/VideoCard.astro';
-import { slugify } from '@utils/slugify';
+import { slugify } from '@utils/slugify'; // Masih bisa berguna untuk hal lain, tapi tidak untuk paginasi lagi
 import { getAllVideos } from '@utils/videoData';
 
-export async function getStaticPaths({ paginate }) {
-  const allVideos = await getAllVideos();
-  console.log(`[DEBUG_INDEX] Videos fetched for pagination in getStaticPaths: ${allVideos.length}`);
-
-  if (allVideos.length === 0) {
-    console.warn(`[WARN_INDEX] No videos found in CSV. Paginate will return an empty set.`);
-    // Jika tidak ada video, pastikan paginate tetap mengembalikan sesuatu yang Astro bisa tangani
-    return paginate([], { pageSize: 9 });
-  }
-
-  allVideos.sort((a, b) => parseInt(b.id) - parseInt(a.id));
-
-  return paginate(allVideos, {
-    pageSize: 9,
-  });
+// getStaticPaths tidak lagi membutuhkan paginate karena kita akan menampilkan semua video
+export async function getStaticPaths() {
+  // Hanya perlu mengembalikan satu path untuk halaman index utama
+  return [{ params: {} }];
 }
 
-// Mendapatkan properti 'page' yang disediakan oleh `paginate`
-const { page } = Astro.props;
+// Mendapatkan properti yang diperlukan secara langsung, tanpa 'page' dari paginate
+// Jika Anda masih ingin mengurutkan, lakukan di sini
+const allVideos = await getAllVideos();
+allVideos.sort((a, b) => parseInt(b.id) - parseInt(a.id));
 
-// Pastikan page.data selalu array, meskipun page atau page.data undefined
-const currentVideos = page?.data || [];
+// currentVideos kini adalah semua video
+const currentVideos = allVideos;
 
 // Mendapatkan domain unik dari URL video untuk preconnect
 const allDomains = new Set<string>();
-// Gunakan currentVideos alih-alih page.data langsung
 currentVideos.forEach(video => {
   try {
     allDomains.add(new URL(video.videoUrl).origin);
@@ -40,15 +30,15 @@ currentVideos.forEach(video => {
 });
 const preconnectDomains = Array.from(allDomains);
 
-// Breadcrumb data
+// Breadcrumb data - Sekarang hanya Beranda
 const breadcrumbs = [
   { name: 'Beranda', url: '/' },
 ];
 ---
 
 <Layout
-  title={page.currentPage === 1 ? "Video Portal - Koleksi Video Terbaik" : `Video Portal - Halaman ${page.currentPage}`}
-  description={page.currentPage === 1 ? "Jelajahi koleksi video terbaru dan terpopuler dari berbagai kategori." : `Melanjutkan penjelajahan koleksi video, halaman ${page.currentPage}.`}
+  title="Video Portal - Koleksi Video Terbaik" // Judul statis, tidak perlu halaman
+  description="Jelajahi koleksi video terbaru dan terpopuler dari berbagai kategori." // Deskripsi statis
   preconnectDomains={preconnectDomains}
 >
   <main class="home-page">
@@ -67,13 +57,7 @@ const breadcrumbs = [
             <meta itemprop="position" content={(index + 1).toString()} />
           </li>
         ))}
-        {page.currentPage > 1 && (
-          <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
-            <span class="separator">/</span>
-            <span itemprop="name">Halaman {page.currentPage}</span>
-            <meta itemprop="position" content={(breadcrumbs.length + 1).toString()} />
-          </li>
-        )}
+        {/* Tidak perlu lagi menampilkan halaman di breadcrumb */}
       </ol>
     </nav>
 
@@ -86,7 +70,7 @@ const breadcrumbs = [
       <h2>Video Terbaru</h2>
       <div class="video-grid">
         {currentVideos.length === 0 ? (
-          <p class="no-videos">Belum ada video yang tersedia di halaman ini.</p>
+          <p class="no-videos">Belum ada video yang tersedia.</p> {/* Pesan sedikit diubah */}
         ) : (
           currentVideos.map((video) => (
             <VideoCard video={video} />
@@ -94,55 +78,10 @@ const breadcrumbs = [
         )}
       </div>
 
-      <nav class="pagination-controls" aria-label="Navigasi Halaman Video">
-        {page.url.prev && (
-          <a href={page.url.prev} class="pagination-button prev-button">
-            &larr; Sebelumnya
-          </a>
-        )}
-        <div class="page-numbers">
-          {Array.from({ length: page.lastPage }, (_, i) => i + 1).map((pageNum) => {
-            const isCurrent = pageNum === page.currentPage;
-            const isNearCurrent = Math.abs(pageNum - page.currentPage) < 2;
-            const isEdgePage = pageNum === 1 || pageNum === page.lastPage;
-
-            let showEllipsisBefore = false;
-            let showEllipsisAfter = false;
-
-            if (page.lastPage > 7) {
-                if (pageNum === page.currentPage - 3 && page.currentPage > 1 && page.currentPage - 3 > 1) {
-                    showEllipsisBefore = true;
-                }
-                if (pageNum === page.currentPage + 3 && page.currentPage < page.lastPage && page.currentPage + 3 < page.lastPage) {
-                    showEllipsisAfter = true;
-                }
-            }
-
-            if (isCurrent || isNearCurrent || isEdgePage || showEllipsisBefore || showEllipsisAfter) {
-              return (
-                <span>
-                  {showEllipsisBefore && <span class="ellipsis">...</span>}
-                  <a
-                    href={pageNum === 1 ? '/' : `/page/${pageNum}/`}
-                    class={`page-number ${isCurrent ? 'active' : ''}`}
-                    aria-current={isCurrent ? 'page' : undefined}
-                  >
-                    {pageNum}
-                  </a>
-                  {showEllipsisAfter && <span class="ellipsis">...</span>}
-                </span>
-              );
-            } else {
-              return null;
-            }
-          })}
-        </div>
-        {page.url.next && (
-          <a href={page.url.next} class="pagination-button next-button">
-            Selanjutnya &rarr;
-          </a>
-        )}
-      </nav>
+      {/* Kontrol Paginasi Dihapus Sepenuhnya */}
+      {/* <nav class="pagination-controls" aria-label="Navigasi Halaman Video">
+        ... (kode paginasi sebelumnya) ...
+      </nav> */}
     </section>
   </main>
 </Layout>
@@ -251,17 +190,18 @@ const breadcrumbs = [
     padding: 50px 0;
   }
 
+  /* Gaya Paginasi Dihapus */
   /* --- Gaya Paginasi --- */
-  .pagination-controls {
+  /* .pagination-controls {
     display: flex;
     justify-content: center;
     align-items: center;
     margin-top: 50px;
     gap: 15px;
     flex-wrap: wrap;
-  }
+  } */
 
-  .pagination-button {
+  /* .pagination-button {
     display: inline-flex;
     align-items: center;
     padding: 10px 20px;
@@ -272,27 +212,27 @@ const breadcrumbs = [
     font-weight: 500;
     transition: background-color 0.2s ease-in-out, transform 0.2s ease;
     box-shadow: var(--shadow-light);
-  }
+  } */
 
-  .pagination-button:hover {
+  /* .pagination-button:hover {
     background-color: #0056b3;
     transform: translateY(-2px);
-  }
+  } */
 
-  .pagination-button.prev-button {
+  /* .pagination-button.prev-button {
     margin-right: auto;
-  }
+  } */
 
-  .pagination-button.next-button {
+  /* .pagination-button.next-button {
     margin-left: auto;
-  }
+  } */
 
-  .page-numbers {
+  /* .page-numbers {
     display: flex;
     gap: 8px;
-  }
+  } */
 
-  .page-number {
+  /* .page-number {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -306,33 +246,33 @@ const breadcrumbs = [
     color: var(--text-color);
     font-weight: 500;
     transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-  }
+  } */
 
-  .page-number:hover {
+  /* .page-number:hover {
     background-color: #e9ecef;
     border-color: var(--primary-color);
-  }
+  } */
 
-  .page-number.active {
+  /* .page-number.active {
     background-color: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
     cursor: default;
     font-weight: bold;
     box-shadow: var(--shadow-light);
-  }
+  } */
 
-  .page-number.active:hover {
+  /* .page-number.active:hover {
     background-color: var(--primary-color);
     color: white;
-  }
+  } */
 
-  .ellipsis {
+  /* .ellipsis {
     padding: 0 5px;
     color: #888;
     font-size: 1.2em;
     font-weight: bold;
-  }
+  } */
 
   @media (max-width: 768px) {
     .video-grid {
@@ -345,7 +285,8 @@ const breadcrumbs = [
     .hero-section {
       padding: 30px 15px;
     }
-    .pagination-controls {
+    /* Paginasi mobile juga dihapus */
+    /* .pagination-controls {
       gap: 10px;
       justify-content: space-between;
     }
@@ -360,7 +301,7 @@ const breadcrumbs = [
       min-width: 35px;
       height: 35px;
       font-size: 0.9em;
-    }
+    } */
   }
 
   @media (max-width: 480px) {
