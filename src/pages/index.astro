@@ -1,16 +1,17 @@
 ---
 // src/pages/index.astro
-import Layout from '@layouts/BaseLayout.astro'; // Menggunakan alias
-import VideoCard from '@components/VideoCard.astro'; // Menggunakan alias
-import { slugify } from '@utils/slugify'; // Menggunakan alias
-import { getAllVideos } from '@utils/videoData'; // <-- Import dari utilitas
+import Layout from '@layouts/BaseLayout.astro';
+import VideoCard from '@components/VideoCard.astro';
+import { slugify } from '@utils/slugify';
+import { getAllVideos } from '@utils/videoData';
 
 export async function getStaticPaths({ paginate }) {
   const allVideos = await getAllVideos();
-  console.log(`[DEBUG_INDEX] Videos fetched for pagination: ${allVideos.length}`);
+  console.log(`[DEBUG_INDEX] Videos fetched for pagination in getStaticPaths: ${allVideos.length}`);
 
   if (allVideos.length === 0) {
-    console.warn(`[WARN_INDEX] No videos found. Generating an empty page.`);
+    console.warn(`[WARN_INDEX] No videos found in CSV. Paginate will return an empty set.`);
+    // Jika tidak ada video, pastikan paginate tetap mengembalikan sesuatu yang Astro bisa tangani
     return paginate([], { pageSize: 9 });
   }
 
@@ -21,10 +22,16 @@ export async function getStaticPaths({ paginate }) {
   });
 }
 
+// Mendapatkan properti 'page' yang disediakan oleh `paginate`
 const { page } = Astro.props;
 
+// Pastikan page.data selalu array, meskipun page atau page.data undefined
+const currentVideos = page?.data || [];
+
+// Mendapatkan domain unik dari URL video untuk preconnect
 const allDomains = new Set<string>();
-page.data.forEach(video => {
+// Gunakan currentVideos alih-alih page.data langsung
+currentVideos.forEach(video => {
   try {
     allDomains.add(new URL(video.videoUrl).origin);
   } catch (e) {
@@ -33,6 +40,7 @@ page.data.forEach(video => {
 });
 const preconnectDomains = Array.from(allDomains);
 
+// Breadcrumb data
 const breadcrumbs = [
   { name: 'Beranda', url: '/' },
 ];
@@ -77,10 +85,10 @@ const breadcrumbs = [
     <section class="latest-videos-section">
       <h2>Video Terbaru</h2>
       <div class="video-grid">
-        {page.data.length === 0 ? (
+        {currentVideos.length === 0 ? (
           <p class="no-videos">Belum ada video yang tersedia di halaman ini.</p>
         ) : (
-          page.data.map((video) => (
+          currentVideos.map((video) => (
             <VideoCard video={video} />
           ))
         )}

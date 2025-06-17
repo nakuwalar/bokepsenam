@@ -1,24 +1,17 @@
 ---
 // src/components/VideoCard.astro
-interface Video {
-  id: string;
-  title: string;
-  description: string;
-  thumbnail: string;
-  duration: string;
-  videoUrl: string;
-  category: string;
-}
+// Menggunakan interface VideoData yang diimpor dari videoData.ts
+import type { VideoData } from '@utils/videoData';
 
 interface Props {
-  video: Video;
+  video: VideoData;
 }
 
 const { video } = Astro.props;
 
-// Fungsi untuk format durasi (opsional, bisa dipindah ke utils juga)
-function formatDuration(seconds: string): string {
-  const totalSeconds = parseInt(seconds, 10);
+// Fungsi untuk format durasi (bisa dipindah ke utils jika sering dipakai)
+function formatDuration(secondsStr: string): string {
+  const totalSeconds = parseInt(secondsStr, 10);
   if (isNaN(totalSeconds) || totalSeconds < 0) {
     return 'N/A';
   }
@@ -35,7 +28,7 @@ function formatDuration(seconds: string): string {
 }
 ---
 
-<a href={video.videoUrl} class="video-card" target="_blank" rel="noopener noreferrer">
+<a href={`/video/${video.id}/`} class="video-card">
   <div class="thumbnail-container">
     <img src={video.thumbnail} alt={video.title} loading="lazy" width="320" height="180" />
     <span class="duration">{formatDuration(video.duration)}</span>
@@ -111,17 +104,17 @@ function formatDuration(seconds: string): string {
     margin-top: 0;
     margin-bottom: 10px;
     line-height: 1.3;
-    color: var(--primary-color); /* Warna yang lebih menonjol */
+    color: var(--primary-color);
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
-    -webkit-line-clamp: 2; /* Batasi 2 baris */
+    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
   }
 
   .video-info .category {
     font-size: 0.85em;
-    color: #6c757d; /* Warna abu-abu yang lebih tenang */
+    color: #6c757d;
     margin-bottom: 8px;
     text-transform: uppercase;
     font-weight: 600;
@@ -134,7 +127,7 @@ function formatDuration(seconds: string): string {
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
-    -webkit-line-clamp: 3; /* Batasi 3 baris */
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
   }
 

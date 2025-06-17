@@ -1,9 +1,9 @@
 ---
 // src/pages/kategori/[categorySlug].astro
-import Layout from '@layouts/BaseLayout.astro'; // Menggunakan alias
-import VideoCard from '@components/VideoCard.astro'; // Menggunakan alias
-import { slugify } from '@utils/slugify'; // Menggunakan alias
-import { getAllVideos } from '@utils/videoData'; // <-- Import dari utilitas
+import Layout from '@layouts/BaseLayout.astro';
+import VideoCard from '@components/VideoCard.astro';
+import { slugify } from '@utils/slugify';
+import { getAllVideos } from '@utils/videoData';
 
 export async function getStaticPaths({ paginate }) {
   const allVideos = await getAllVideos();
@@ -11,7 +11,7 @@ export async function getStaticPaths({ paginate }) {
 
   if (allVideos.length === 0) {
     console.error(`[ERROR_CATEGORY] No videos found for categories. Check CSV!`);
-    return [];
+    return []; // Mengembalikan array kosong jika tidak ada video
   }
 
   const uniqueCategories = [...new Set(allVideos.map((video) => video.category.trim()))];
@@ -34,7 +34,7 @@ export async function getStaticPaths({ paginate }) {
             props: { originalCategoryName: category } // Teruskan nama kategori asli sebagai prop
         }));
     } else {
-        console.warn(`[WARN_CATEGORY] Category "${category}" has no videos after filtering.`);
+        console.warn(`[WARN_CATEGORY] Category "${category}" has no videos after filtering. This category page will not be generated.`);
     }
   }
   console.log(`[DEBUG_CATEGORY] Total category paginated paths generated: ${paths.length}`);
@@ -43,8 +43,11 @@ export async function getStaticPaths({ paginate }) {
 
 const { page, categorySlug, originalCategoryName } = Astro.props;
 
+// Pastikan page.data selalu array, meskipun page atau page.data undefined
+const currentVideos = page?.data || [];
+
 const allDomains = new Set<string>();
-page.data.forEach(video => {
+currentVideos.forEach(video => { // Gunakan currentVideos
   try {
     allDomains.add(new URL(video.videoUrl).origin);
   } catch (e) {
@@ -55,7 +58,7 @@ const preconnectDomains = Array.from(allDomains);
 
 const breadcrumbs = [
   { name: 'Beranda', url: '/' },
-  { name: 'Kategori', url: '/kategori/' },
+  { name: 'Kategori', url: '/kategori/' }, // Link ke halaman kategori (jika ada)
   { name: originalCategoryName, url: `/kategori/${categorySlug}/` },
 ];
 ---
@@ -98,10 +101,10 @@ const breadcrumbs = [
 
     <section class="category-videos-section">
       <div class="video-grid">
-        {page.data.length === 0 ? (
+        {currentVideos.length === 0 ? (
           <p class="no-videos">Belum ada video yang tersedia dalam kategori ini.</p>
         ) : (
-          page.data.map((video) => (
+          currentVideos.map((video) => (
             <VideoCard video={video} />
           ))
         )}
@@ -110,7 +113,7 @@ const breadcrumbs = [
       <nav class="pagination-controls" aria-label="Navigasi Halaman Kategori">
         {page.url.prev && (
           <a href={page.url.prev} class="pagination-button prev-button">
-            ← Sebelumnya
+            &larr; Sebelumnya
           </a>
         )}
         <div class="page-numbers">
@@ -152,7 +155,7 @@ const breadcrumbs = [
         </div>
         {page.url.next && (
           <a href={page.url.next} class="pagination-button next-button">
-            Selanjutnya →
+            Selanjutnya &rarr;
           </a>
         )}
       </nav>

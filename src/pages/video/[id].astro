@@ -1,11 +1,17 @@
 ---
 // src/pages/video/[id].astro
 import Layout from '@layouts/BaseLayout.astro';
-import { getAllVideos, getVideoById } from '@utils/videoData'; // Import both
+import { getAllVideos, getVideoById } from '@utils/videoData';
 import { slugify } from '@utils/slugify';
 
 export async function getStaticPaths() {
   const allVideos = await getAllVideos(); // Get all videos to generate paths
+  console.log(`[DEBUG_VIDEO_DETAIL] Found ${allVideos.length} videos for detail pages.`);
+
+  if (allVideos.length === 0) {
+    console.warn(`[WARN_VIDEO_DETAIL] No videos found to generate detail pages. Check CSV.`);
+    return [];
+  }
 
   return allVideos.map((video) => ({
     params: { id: video.id }, // ID dari video akan menjadi parameter dinamis
@@ -19,6 +25,7 @@ const video = await getVideoById(videoId); // Panggil fungsi baru
 
 // Jika video tidak ditemukan (misalnya, ada ID di params tapi tidak ada di CSV)
 if (!video) {
+  console.error(`[ERROR_VIDEO_DETAIL] Video with ID ${videoId} not found.`);
   return Astro.redirect('/404'); // Atau tampilkan halaman error yang sesuai
 }
 
