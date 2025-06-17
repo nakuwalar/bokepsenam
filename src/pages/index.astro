@@ -69,14 +69,34 @@ Object.values(videosByCategory).flat().forEach(video => {
 const preconnectDomains = Array.from(allDomains);
 
 // Breadcrumb data
+const breadcrumbs = [
+  { name: 'Beranda', url: '/' },
+];
 ---
 
 <Layout
-  title="BokepSayang - Video Bokep Indo Terbaru"
+  title="BokepSenam - Video Bokep Indo Terbaru"
   description="Temukan berbagai video bokep indonesia mulai bokep bocil sampai ngentot tante!"
   preconnectDomains={preconnectDomains}
 >
   <main class="home-page">
+    <nav class="breadcrumb" aria-label="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList">
+      <ol>
+        {breadcrumbs.map((item, index) => (
+          <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            {index > 0 && <span class="separator">/</span>}
+            {item.url ? (
+              <a itemprop="item" href={item.url}>
+                <span itemprop="name">{item.name}</span>
+              </a>
+            ) : (
+              <span itemprop="name">{item.name}</span>
+            )}
+            <meta itemprop="position" content={(index + 1).toString()} />
+          </li>
+        ))}
+      </ol>
+    </nav>
 
     <section class="hero-section">
       <h1>Selamat Datang di Bokep Senam!</h1>

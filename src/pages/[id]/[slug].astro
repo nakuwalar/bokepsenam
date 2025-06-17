@@ -93,7 +93,7 @@ const durationISO = `PT${video.duration.replace(':', 'M')}S`;
 ---
 
 <Layout
-  title={`${video.title} | Video Portal`}
+  title={`${video.title} | Bokep Senam`}
   description={video.description}
   image={video.thumbnail}
   preconnectDomains={preconnectDomains}
@@ -104,7 +104,7 @@ const durationISO = `PT${video.duration.replace(':', 'M')}S`;
       <ol>
         <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
           <a itemprop="item" href="/">
-            <span itemprop="name">Home</span>
+            <span itemprop="name">Beranda</span>
           </a>
           <meta itemprop="position" content="1" />
         </li>
@@ -132,7 +132,7 @@ const durationISO = `PT${video.duration.replace(':', 'M')}S`;
       <meta itemprop="contentUrl" content={video.videoUrl} />
       <meta itemprop="interactionCount" content="0" />
       <meta itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-        <meta itemprop="name" content="Bokep Senam" />
+        <meta itemprop="name" content="Video Portal" />
         <meta itemprop="url" content={Astro.site} />
       </meta>
 <!-- JuicyAds PopUnders v3 Start -->
@@ -144,7 +144,7 @@ const durationISO = `PT${video.duration.replace(':', 'M')}S`;
           width="100%"
           height="auto"
           src={video.videoUrl}
-          title={`${video.title}`}
+          title={`Video: ${video.title}`}
           frameborder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowfullscreen
