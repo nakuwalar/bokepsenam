@@ -7,7 +7,7 @@ import sharp from 'sharp';
 import fetch from 'node-fetch';
 import { Buffer } from 'buffer'; // Penting: Tambahkan ini untuk tipe Buffer
 
-interface VideoData {
+export interface VideoData {
   id: string;
   title: string;
   description: string;
@@ -69,6 +69,10 @@ async function processThumbnail(videoId: string, thumbnailUrl: string): Promise<
     console.error(`[ERROR] Gagal memproses thumbnail untuk ID ${videoId} dari ${thumbnailUrl}:`, error);
     return null;
   }
+}
+export async function getVideoById(id: string): Promise<VideoData | undefined> {
+  const allVideos = await getAllVideos(); // Dapatkan semua video
+  return allVideos.find(video => video.id === id); // Cari video berdasarkan ID
 }
 
 export async function getAllVideos(): Promise<VideoData[]> {

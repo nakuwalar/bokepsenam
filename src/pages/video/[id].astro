@@ -1,91 +1,39 @@
 ---
-import Layout from '../../layouts/BaseLayout.astro';
-import path from 'path';
-import fs from 'fs/promises';
-import { createReadStream } from 'fs';
-import csv from 'csv-parser';
-import sharp from 'sharp';
-import fetch from 'node-fetch';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { slugify } from '../../utils/slugify';
-
-// Define __dirname equivalent for ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-interface VideoData {
-  id: string;
-  title: string;
-  description: string;
-  thumbnail: string; // Ini adalah path lokal WebP
-  thumbAsli: string; // Ini adalah URL asli dari CSV
-  duration: string;
-  videoUrl: string;
-  category: string;
-}
-
-// Direktori untuk menyimpan thumbnail lokal
-const THUMBNAIL_DIR = path.join(process.cwd(), 'public', 'thumbnails');
-const THUMBNAIL_BASE_URL = '/thumbnails/';
-
-async function ensureDirExists(dirPath: string) { /* ... */ } // Same as above
-async function processThumbnail(videoId: string, thumbnailUrl: string): Promise<string | null> { /* ... */ } // Same as above
-
-async function getAllVideosDetail(): Promise<VideoData[]> {
-  const results: VideoData[] = [];
-  const csvFilePath = path.resolve(process.cwd(), 'src/data/videos.csv');
-
-  await ensureDirExists(THUMBNAIL_DIR);
-
-  return new Promise((resolve, reject) => {
-    createReadStream(csvFilePath)
-      .pipe(csv({ separator: ';' }))
-      .on('data', async (data: any) => {
-        const thumbAsliUrl = data.thumbnail;
-        let localThumbnailPath: string | null = null;
-
-        if (thumbAsliUrl) {
-          localThumbnailPath = await processThumbnail(data.id, thumbAsliUrl);
-        }
-
-        results.push({
-          id: data.id,
-          title: data.title,
-          description: data.description,
-          thumbnail: localThumbnailPath || thumbAsliUrl || '/placeholder.webp',
-          thumbAsli: thumbAsliUrl || '',
-          duration: data.duration,
-          videoUrl: data.videoUrl,
-          category: data.category,
-        });
-      })
-      .on('end', () => {
-        console.log(`[INFO] Selesai membaca CSV untuk detail video. Total video: ${results.length}`);
-        resolve(results);
-      })
-      .on('error', (error) => {
-        console.error("[ERROR] Gagal membaca file CSV untuk detail video:", error);
-        reject(error);
-      });
-  });
-}
+// src/pages/video/[id].astro
+import Layout from '@layouts/BaseLayout.astro';
+import { getAllVideos, getVideoById } from '@utils/videoData'; // Import both
+import { slugify } from '@utils/slugify';
 
 export async function getStaticPaths() {
-  const videos = await getAllVideosDetail();
-  return videos.map(video => ({
-    params: { id: video.id },
-    props: { video },
+  const allVideos = await getAllVideos(); // Get all videos to generate paths
+
+  return allVideos.map((video) => ({
+    params: { id: video.id }, // ID dari video akan menjadi parameter dinamis
+    props: { videoId: video.id }, // Lewatkan ID video sebagai prop
   }));
 }
 
-const { video } = Astro.props;
+const { videoId } = Astro.props; // Dapatkan videoId dari props
 
-const preconnectDomains = [new URL(video.videoUrl).origin];
+const video = await getVideoById(videoId); // Panggil fungsi baru
 
+// Jika video tidak ditemukan (misalnya, ada ID di params tapi tidak ada di CSV)
+if (!video) {
+  return Astro.redirect('/404'); // Atau tampilkan halaman error yang sesuai
+}
+
+// Untuk preconnect domain video
+const preconnectDomains: string[] = [];
+try {
+  preconnectDomains.push(new URL(video.videoUrl).origin);
+} catch (e) {
+  console.error(`[ERROR] URL video tidak valid untuk ID ${video.id}:`, e);
+}
+
+// Breadcrumb data
 const breadcrumbs = [
   { name: 'Beranda', url: '/' },
-  { name: 'Kategori', url: '/kategori/' },
+  { name: 'Kategori', url: '/kategori/' }, // Link ke halaman kategori (jika ada)
   { name: video.category, url: `/kategori/${slugify(video.category)}/` },
   { name: video.title, url: `/video/${video.id}/` },
 ];
@@ -93,7 +41,8 @@ const breadcrumbs = [
 
 <Layout
   title={video.title}
-  description={video.description.substring(0, 160)}
+  description={video.description}
+  canonicalUrl={`${import.meta.env.PUBLIC_SITE}/video/${video.id}/`}
   preconnectDomains={preconnectDomains}
 >
   <main class="video-detail-page">
@@ -116,30 +65,32 @@ const breadcrumbs = [
     </nav>
 
     <section class="video-player-section">
+      <h1 class="video-title">{video.title}</h1>
       <div class="video-wrapper">
         <iframe
           src={video.videoUrl}
-          title={video.title}
           frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          referrerpolicy="strict-origin-when-cross-origin"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowfullscreen
+          title={video.title}
           loading="lazy"
         ></iframe>
       </div>
-      <h1>{video.title}</h1>
       <div class="video-meta">
-        <span class="meta-item">Kategori: <a href={`/kategori/${slugify(video.category)}/`}>{video.category}</a></span>
-        <span class="meta-item">Durasi: {video.duration}</span>
+        <p class="video-category">Kategori: <a href={`/kategori/${slugify(video.category)}/`}>{video.category}</a></p>
+        <p class="video-duration">Durasi: {video.duration}</p>
       </div>
-      <p class="video-description">{video.description}</p>
+      <div class="video-description">
+        <h2>Deskripsi Video</h2>
+        <p>{video.description}</p>
+      </div>
     </section>
   </main>
 </Layout>
 
 <style>
   .video-detail-page {
-    max-width: 960px;
+    max-width: 900px;
     margin: 30px auto;
     padding: 20px;
     background-color: #fff;
@@ -147,18 +98,21 @@ const breadcrumbs = [
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
   }
 
-  .video-player-section {
-    margin-bottom: 40px;
+  .video-title {
+    font-size: clamp(1.8em, 3vw, 2.5em);
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    text-align: center;
   }
 
   .video-wrapper {
     position: relative;
-    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
     height: 0;
     overflow: hidden;
     margin-bottom: 25px;
+    background-color: #000;
     border-radius: 8px;
-    box-shadow: var(--shadow-medium);
   }
 
   .video-wrapper iframe {
@@ -167,37 +121,46 @@ const breadcrumbs = [
     left: 0;
     width: 100%;
     height: 100%;
-    border: none;
-  }
-
-  .video-detail-page h1 {
-    font-size: clamp(1.8em, 4vw, 2.8em);
-    margin-bottom: 15px;
-    color: var(--primary-color);
+    border: 0;
   }
 
   .video-meta {
     display: flex;
-    gap: 20px;
+    justify-content: space-between;
     margin-bottom: 20px;
     font-size: 0.95em;
-    color: var(--secondary-color);
+    color: #555;
   }
 
-  .video-meta .meta-item a {
-    color: var(--accent-color);
+  .video-meta p {
+    margin: 0;
+  }
+
+  .video-category a {
+    color: var(--primary-color);
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
   }
 
-  .video-meta .meta-item a:hover {
+  .video-category a:hover {
     text-decoration: underline;
   }
 
   .video-description {
-    font-size: 1.1em;
+    border-top: 1px solid var(--border-color);
+    padding-top: 25px;
+  }
+
+  .video-description h2 {
+    font-size: 1.5em;
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 15px;
+  }
+
+  .video-description p {
     line-height: 1.8;
-    color: var(--text-color);
+    color: #444;
   }
 
   .breadcrumb {
@@ -237,6 +200,10 @@ const breadcrumbs = [
   @media (max-width: 768px) {
     .video-detail-page {
       padding: 15px;
+      margin: 20px auto;
+    }
+    .video-title {
+      font-size: 2em;
     }
     .video-meta {
       flex-direction: column;
