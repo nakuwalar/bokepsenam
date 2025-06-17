@@ -1,0 +1,177 @@
+---
+// src/layouts/BaseLayout.astro
+interface Props {
+  title: string;
+  description: string;
+  preconnectDomains?: string[];
+  canonicalUrl?: string; // Tambahkan prop ini
+}
+
+const { title, description, preconnectDomains = [], canonicalUrl } = Astro.props;
+
+// Untuk canonical URL, gunakan PUBLIC_SITE jika canonicalUrl tidak disediakan
+// dan pastikan PUBLIC_SITE ada
+const siteBaseUrl = import.meta.env.PUBLIC_SITE || Astro.url.origin; // Fallback ke origin dev server jika PUBLIC_SITE tidak diatur
+const currentUrl = new URL(Astro.url.pathname, siteBaseUrl).href;
+---
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {/* Canonical URL untuk SEO */}
+    {canonicalUrl ? (
+      <link rel="canonical" href={canonicalUrl} />
+    ) : (
+      <link rel="canonical" href={currentUrl} />
+    )}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    {preconnectDomains.map((domain) => (
+      <link rel="preconnect" href={domain} crossorigin />
+    ))}
+
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-content">
+        <a href="/" class="site-logo">
+          Video Portal
+        </a>
+        <nav class="main-nav">
+          <ul>
+            <li><a href="/">Beranda</a></li>
+            <li><a href="/kategori/">Kategori</a></li>
+            </ul>
+        </nav>
+      </div>
+    </header>
+
+    <slot />
+
+    <footer class="site-footer">
+      <div class="footer-content">
+        <p>&copy; {new Date().getFullYear()} Video Portal. All rights reserved.</p>
+        <div class="footer-links">
+          <a href="/about">Tentang Kami</a>
+          <a href="/privacy">Kebijakan Privasi</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  /* Global styles */
+  :root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --accent-color: #28a745;
+    --background-color: #f4f7f6;
+    --text-color: #343a40;
+    --border-color: #e9ecef;
+    --card-bg: #ffffff;
+    --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  body {
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+  }
+
+  /* Header Styles */
+  .site-header {
+    background-color: #fff;
+    padding: 15px 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+  }
+
+  .header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .site-logo {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+
+  .main-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 20px;
+  }
+
+  .main-nav a {
+    color: var(--text-color);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 5px 0;
+    transition: color 0.2s ease;
+  }
+
+  .main-nav a:hover {
+    color: var(--primary-color);
+  }
+
+  /* Footer Styles */
+  .site-footer {
+    background-color: #343a40;
+    color: white;
+    padding: 25px 20px;
+    margin-top: 50px;
+    text-align: center;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .footer-links {
+    margin-top: 10px;
+  }
+
+  .footer-links a {
+    color: white;
+    text-decoration: none;
+    margin: 0 10px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+  }
+
+  .footer-links a:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+
+  /* Responsive Adjustments for Header/Footer */
+  @media (max-width: 768px) {
+    .header-content {
+      flex-direction: column;
+      gap: 15px;
+    }
+    .main-nav ul {
+      flex-direction: column;
+      gap: 10px;
+      text-align: center;
+    }
+  }
+</style>

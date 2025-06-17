@@ -1,0 +1,246 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+import path from 'path';
+import fs from 'fs/promises';
+import { createReadStream } from 'fs';
+import csv from 'csv-parser';
+import sharp from 'sharp';
+import fetch from 'node-fetch';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { slugify } from '../../utils/slugify';
+
+// Define __dirname equivalent for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+interface VideoData {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string; // Ini adalah path lokal WebP
+  thumbAsli: string; // Ini adalah URL asli dari CSV
+  duration: string;
+  videoUrl: string;
+  category: string;
+}
+
+// Direktori untuk menyimpan thumbnail lokal
+const THUMBNAIL_DIR = path.join(process.cwd(), 'public', 'thumbnails');
+const THUMBNAIL_BASE_URL = '/thumbnails/';
+
+async function ensureDirExists(dirPath: string) { /* ... */ } // Same as above
+async function processThumbnail(videoId: string, thumbnailUrl: string): Promise<string | null> { /* ... */ } // Same as above
+
+async function getAllVideosDetail(): Promise<VideoData[]> {
+  const results: VideoData[] = [];
+  const csvFilePath = path.resolve(process.cwd(), 'src/data/videos.csv');
+
+  await ensureDirExists(THUMBNAIL_DIR);
+
+  return new Promise((resolve, reject) => {
+    createReadStream(csvFilePath)
+      .pipe(csv({ separator: ';' }))
+      .on('data', async (data: any) => {
+        const thumbAsliUrl = data.thumbnail;
+        let localThumbnailPath: string | null = null;
+
+        if (thumbAsliUrl) {
+          localThumbnailPath = await processThumbnail(data.id, thumbAsliUrl);
+        }
+
+        results.push({
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          thumbnail: localThumbnailPath || thumbAsliUrl || '/placeholder.webp',
+          thumbAsli: thumbAsliUrl || '',
+          duration: data.duration,
+          videoUrl: data.videoUrl,
+          category: data.category,
+        });
+      })
+      .on('end', () => {
+        console.log(`[INFO] Selesai membaca CSV untuk detail video. Total video: ${results.length}`);
+        resolve(results);
+      })
+      .on('error', (error) => {
+        console.error("[ERROR] Gagal membaca file CSV untuk detail video:", error);
+        reject(error);
+      });
+  });
+}
+
+export async function getStaticPaths() {
+  const videos = await getAllVideosDetail();
+  return videos.map(video => ({
+    params: { id: video.id },
+    props: { video },
+  }));
+}
+
+const { video } = Astro.props;
+
+const preconnectDomains = [new URL(video.videoUrl).origin];
+
+const breadcrumbs = [
+  { name: 'Beranda', url: '/' },
+  { name: 'Kategori', url: '/kategori/' },
+  { name: video.category, url: `/kategori/${slugify(video.category)}/` },
+  { name: video.title, url: `/video/${video.id}/` },
+];
+---
+
+<Layout
+  title={video.title}
+  description={video.description.substring(0, 160)}
+  preconnectDomains={preconnectDomains}
+>
+  <main class="video-detail-page">
+    <nav class="breadcrumb" aria-label="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList">
+      <ol>
+        {breadcrumbs.map((item, index) => (
+          <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            {index > 0 && <span class="separator">/</span>}
+            {item.url ? (
+              <a itemprop="item" href={item.url}>
+                <span itemprop="name">{item.name}</span>
+              </a>
+            ) : (
+              <span itemprop="name">{item.name}</span>
+            )}
+            <meta itemprop="position" content={(index + 1).toString()} />
+          </li>
+        ))}
+      </ol>
+    </nav>
+
+    <section class="video-player-section">
+      <div class="video-wrapper">
+        <iframe
+          src={video.videoUrl}
+          title={video.title}
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen
+          loading="lazy"
+        ></iframe>
+      </div>
+      <h1>{video.title}</h1>
+      <div class="video-meta">
+        <span class="meta-item">Kategori: <a href={`/kategori/${slugify(video.category)}/`}>{video.category}</a></span>
+        <span class="meta-item">Durasi: {video.duration}</span>
+      </div>
+      <p class="video-description">{video.description}</p>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .video-detail-page {
+    max-width: 960px;
+    margin: 30px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  }
+
+  .video-player-section {
+    margin-bottom: 40px;
+  }
+
+  .video-wrapper {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+    margin-bottom: 25px;
+    border-radius: 8px;
+    box-shadow: var(--shadow-medium);
+  }
+
+  .video-wrapper iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .video-detail-page h1 {
+    font-size: clamp(1.8em, 4vw, 2.8em);
+    margin-bottom: 15px;
+    color: var(--primary-color);
+  }
+
+  .video-meta {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    font-size: 0.95em;
+    color: var(--secondary-color);
+  }
+
+  .video-meta .meta-item a {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .video-meta .meta-item a:hover {
+    text-decoration: underline;
+  }
+
+  .video-description {
+    font-size: 1.1em;
+    line-height: 1.8;
+    color: var(--text-color);
+  }
+
+  .breadcrumb {
+    margin-bottom: 20px;
+    font-size: 0.9em;
+    color: #666;
+  }
+
+  .breadcrumb ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .breadcrumb li {
+    display: flex;
+    align-items: center;
+  }
+
+  .breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumb .separator {
+    margin: 0 8px;
+    color: #999;
+  }
+
+  @media (max-width: 768px) {
+    .video-detail-page {
+      padding: 15px;
+    }
+    .video-meta {
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
+</style>

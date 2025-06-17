@@ -1,0 +1,363 @@
+---
+// src/pages/index.astro
+import Layout from '@layouts/BaseLayout.astro'; // Menggunakan alias
+import VideoCard from '@components/VideoCard.astro'; // Menggunakan alias
+import { slugify } from '@utils/slugify'; // Menggunakan alias
+import { getAllVideos } from '@utils/videoData'; // <-- Import dari utilitas
+
+export async function getStaticPaths({ paginate }) {
+  const allVideos = await getAllVideos();
+  console.log(`[DEBUG_INDEX] Videos fetched for pagination: ${allVideos.length}`);
+
+  if (allVideos.length === 0) {
+    console.warn(`[WARN_INDEX] No videos found. Generating an empty page.`);
+    return paginate([], { pageSize: 9 });
+  }
+
+  allVideos.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+
+  return paginate(allVideos, {
+    pageSize: 9,
+  });
+}
+
+const { page } = Astro.props;
+
+const allDomains = new Set<string>();
+page.data.forEach(video => {
+  try {
+    allDomains.add(new URL(video.videoUrl).origin);
+  } catch (e) {
+    console.error(`[ERROR] URL video tidak valid di CSV untuk video ID ${video.id}:`, e);
+  }
+});
+const preconnectDomains = Array.from(allDomains);
+
+const breadcrumbs = [
+  { name: 'Beranda', url: '/' },
+];
+---
+
+<Layout
+  title={page.currentPage === 1 ? "Video Portal - Koleksi Video Terbaik" : `Video Portal - Halaman ${page.currentPage}`}
+  description={page.currentPage === 1 ? "Jelajahi koleksi video terbaru dan terpopuler dari berbagai kategori." : `Melanjutkan penjelajahan koleksi video, halaman ${page.currentPage}.`}
+  preconnectDomains={preconnectDomains}
+>
+  <main class="home-page">
+    <nav class="breadcrumb" aria-label="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList">
+      <ol>
+        {breadcrumbs.map((item, index) => (
+          <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            {index > 0 && <span class="separator">/</span>}
+            {item.url ? (
+              <a itemprop="item" href={item.url}>
+                <span itemprop="name">{item.name}</span>
+              </a>
+            ) : (
+              <span itemprop="name">{item.name}</span>
+            )}
+            <meta itemprop="position" content={(index + 1).toString()} />
+          </li>
+        ))}
+        {page.currentPage > 1 && (
+          <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            <span class="separator">/</span>
+            <span itemprop="name">Halaman {page.currentPage}</span>
+            <meta itemprop="position" content={(breadcrumbs.length + 1).toString()} />
+          </li>
+        )}
+      </ol>
+    </nav>
+
+    <section class="hero-section">
+      <h1>Selamat Datang di Portal Video Kami!</h1>
+      <p>Temukan berbagai video menarik, dari alam hingga kuliner. Tonton sekarang juga!</p>
+    </section>
+
+    <section class="latest-videos-section">
+      <h2>Video Terbaru</h2>
+      <div class="video-grid">
+        {page.data.length === 0 ? (
+          <p class="no-videos">Belum ada video yang tersedia di halaman ini.</p>
+        ) : (
+          page.data.map((video) => (
+            <VideoCard video={video} />
+          ))
+        )}
+      </div>
+
+      <nav class="pagination-controls" aria-label="Navigasi Halaman Video">
+        {page.url.prev && (
+          <a href={page.url.prev} class="pagination-button prev-button">
+            &larr; Sebelumnya
+          </a>
+        )}
+        <div class="page-numbers">
+          {Array.from({ length: page.lastPage }, (_, i) => i + 1).map((pageNum) => {
+            const isCurrent = pageNum === page.currentPage;
+            const isNearCurrent = Math.abs(pageNum - page.currentPage) < 2;
+            const isEdgePage = pageNum === 1 || pageNum === page.lastPage;
+
+            let showEllipsisBefore = false;
+            let showEllipsisAfter = false;
+
+            if (page.lastPage > 7) {
+                if (pageNum === page.currentPage - 3 && page.currentPage > 1 && page.currentPage - 3 > 1) {
+                    showEllipsisBefore = true;
+                }
+                if (pageNum === page.currentPage + 3 && page.currentPage < page.lastPage && page.currentPage + 3 < page.lastPage) {
+                    showEllipsisAfter = true;
+                }
+            }
+
+            if (isCurrent || isNearCurrent || isEdgePage || showEllipsisBefore || showEllipsisAfter) {
+              return (
+                <span>
+                  {showEllipsisBefore && <span class="ellipsis">...</span>}
+                  <a
+                    href={pageNum === 1 ? '/' : `/page/${pageNum}/`}
+                    class={`page-number ${isCurrent ? 'active' : ''}`}
+                    aria-current={isCurrent ? 'page' : undefined}
+                  >
+                    {pageNum}
+                  </a>
+                  {showEllipsisAfter && <span class="ellipsis">...</span>}
+                </span>
+              );
+            } else {
+              return null;
+            }
+          })}
+        </div>
+        {page.url.next && (
+          <a href={page.url.next} class="pagination-button next-button">
+            Selanjutnya &rarr;
+          </a>
+        )}
+      </nav>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .home-page {
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  }
+
+  .hero-section {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 40px 20px;
+    background: linear-gradient(to right, var(--primary-color), #0056b3);
+    color: white;
+    border-radius: 8px;
+    box-shadow: var(--shadow-medium);
+  }
+
+  .hero-section h1 {
+    font-size: clamp(2.5em, 5vw, 4em);
+    margin-bottom: 10px;
+    line-height: 1.2;
+  }
+
+  .hero-section p {
+    font-size: clamp(1em, 2.5vw, 1.5em);
+    opacity: 0.9;
+  }
+
+  .latest-videos-section {
+    margin-top: 50px;
+  }
+
+  .latest-videos-section h2 {
+    font-size: clamp(1.8em, 3.5vw, 2.5em);
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+    position: relative;
+    padding-bottom: 10px;
+  }
+
+  .latest-videos-section h2::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 0;
+    width: 60px;
+    height: 4px;
+    background-color: var(--accent-color);
+    border-radius: 2px;
+  }
+
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+  }
+
+  .breadcrumb {
+    margin-bottom: 20px;
+    font-size: 0.9em;
+    color: #666;
+  }
+
+  .breadcrumb ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .breadcrumb li {
+    display: flex;
+    align-items: center;
+  }
+
+  .breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumb .separator {
+    margin: 0 8px;
+    color: #999;
+  }
+
+  .no-videos {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 1.2em;
+    color: #999;
+    padding: 50px 0;
+  }
+
+  /* --- Gaya Paginasi --- */
+  .pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 50px;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+
+  .pagination-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: 500;
+    transition: background-color 0.2s ease-in-out, transform 0.2s ease;
+    box-shadow: var(--shadow-light);
+  }
+
+  .pagination-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+  }
+
+  .pagination-button.prev-button {
+    margin-right: auto;
+  }
+
+  .pagination-button.next-button {
+    margin-left: auto;
+  }
+
+  .page-numbers {
+    display: flex;
+    gap: 8px;
+  }
+
+  .page-number {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 8px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  }
+
+  .page-number:hover {
+    background-color: #e9ecef;
+    border-color: var(--primary-color);
+  }
+
+  .page-number.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    cursor: default;
+    font-weight: bold;
+    box-shadow: var(--shadow-light);
+  }
+
+  .page-number.active:hover {
+    background-color: var(--primary-color);
+    color: white;
+  }
+
+  .ellipsis {
+    padding: 0 5px;
+    color: #888;
+    font-size: 1.2em;
+    font-weight: bold;
+  }
+
+  @media (max-width: 768px) {
+    .video-grid {
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    .home-page {
+      padding: 15px;
+    }
+    .hero-section {
+      padding: 30px 15px;
+    }
+    .pagination-controls {
+      gap: 10px;
+      justify-content: space-between;
+    }
+    .pagination-button {
+      padding: 8px 15px;
+      font-size: 0.9em;
+    }
+    .page-numbers {
+      gap: 5px;
+    }
+    .page-number {
+      min-width: 35px;
+      height: 35px;
+      font-size: 0.9em;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .video-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
