@@ -110,7 +110,7 @@ export async function getAllVideos(): Promise<VideoData[]> {
           description: data.description || 'Deskripsi tidak tersedia.',
           thumbnail: data.thumbnail || '',
           thumbAsli: data.thumbnail || '', // Awalnya sama dengan thumbnail
-          duration: data.duration || '0',
+          duration: data.duration || '10',
           videoUrl: data.videoUrl || '',
           category: data.category || 'Umum',
         };
