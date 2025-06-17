@@ -8,7 +8,7 @@ export default defineConfig({
   output: 'static',
   
   // WAJIB: Ganti dengan URL situs Anda yang sebenarnya
-  site: 'https://bokepsayang.pages.dev', // Replace with your actual website domain for SEO
+  site: 'https://bokepsenam.pages.dev', // Replace with your actual website domain for SEO
   
   trailingSlash: 'never',
 
