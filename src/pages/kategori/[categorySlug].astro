@@ -11,7 +11,7 @@ export async function getStaticPaths() {
 
   if (allVideos.length === 0) {
     console.error(`[ERROR_CATEGORY] No videos found for categories. Check CSV!`);
-    return []; // Mengembalikan array kosong jika tidak ada video
+    return [];
   }
 
   const uniqueCategories = [...new Set(allVideos.map((video) => video.category.trim()))];
@@ -27,12 +27,11 @@ export async function getStaticPaths() {
     console.log(`[DEBUG_CATEGORY] Category "${category}" (${categorySlug}) has ${videosInCategory.length} videos.`);
 
     if (videosInCategory.length > 0) {
-      // Tidak lagi menggunakan paginate, langsung push path untuk setiap kategori
       paths.push({
         params: { categorySlug: categorySlug },
         props: {
           originalCategoryName: category,
-          videos: videosInCategory // Kirim semua video dalam kategori ini sebagai prop
+          videos: videosInCategory
         }
       });
     } else {
@@ -43,10 +42,8 @@ export async function getStaticPaths() {
   return paths;
 }
 
-// Menerima props 'videos' yang sekarang berisi semua video untuk kategori ini
 const { categorySlug, originalCategoryName, videos } = Astro.props;
 
-// currentVideos kini adalah semua video untuk kategori ini
 const currentVideos = videos;
 
 const allDomains = new Set<string>();
@@ -67,8 +64,8 @@ const breadcrumbs = [
 ---
 
 <Layout
-  title={`${originalCategoryName} Video`} // Judul statis untuk kategori
-  description={`Jelajahi semua video tentang ${originalCategoryName}.`} // Deskripsi statis
+  title={`${originalCategoryName} Video`}
+  description={`Jelajahi semua video tentang ${originalCategoryName}.`}
   preconnectDomains={preconnectDomains}
 >
   <main class="category-page">
@@ -87,7 +84,6 @@ const breadcrumbs = [
             <meta itemprop="position" content={(index + 1).toString()} />
           </li>
         ))}
-        {/* Tidak perlu lagi menampilkan halaman di breadcrumb */}
       </ol>
     </nav>
 
@@ -106,17 +102,11 @@ const breadcrumbs = [
           ))
         )}
       </div>
-
-      {/* Kontrol Paginasi Dihapus Sepenuhnya */}
-      {/* <nav class="pagination-controls" aria-label="Navigasi Halaman Kategori">
-        ... (kode paginasi sebelumnya) ...
-      </nav> */}
     </section>
   </main>
 </Layout>
 
 <style>
-  /* Gaya CSS untuk kategori/[categorySlug].astro */
   .category-page {
     max-width: 1200px;
     margin: 30px auto;
@@ -130,7 +120,7 @@ const breadcrumbs = [
     text-align: center;
     margin-bottom: 40px;
     padding: 40px 20px;
-    background: linear-gradient(to right, #6c757d, #495057); /* Secondary color for categories */
+    background: linear-gradient(to right, #6c757d, #495057);
     color: white;
     border-radius: 8px;
     box-shadow: var(--shadow-medium);
@@ -199,90 +189,6 @@ const breadcrumbs = [
     padding: 50px 0;
   }
 
-  /* Gaya Paginasi Dihapus */
-  /* --- Gaya Paginasi (sama dengan index.astro) --- */
-  /* .pagination-controls {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-top: 50px;
-    gap: 15px;
-    flex-wrap: wrap;
-  } */
-
-  /* .pagination-button {
-    display: inline-flex;
-    align-items: center;
-    padding: 10px 20px;
-    background-color: var(--primary-color);
-    color: white;
-    text-decoration: none;
-    border-radius: 5px;
-    font-weight: 500;
-    transition: background-color 0.2s ease-in-out, transform 0.2s ease;
-    box-shadow: var(--shadow-light);
-  } */
-
-  /* .pagination-button:hover {
-    background-color: #0056b3;
-    transform: translateY(-2px);
-  } */
-
-  /* .pagination-button.prev-button {
-    margin-right: auto;
-  } */
-
-  /* .pagination-button.next-button {
-    margin-left: auto;
-  } */
-
-  /* .page-numbers {
-    display: flex;
-    gap: 8px;
-  } */
-
-  /* .page-number {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-width: 40px;
-    height: 40px;
-    padding: 0 8px;
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    text-decoration: none;
-    color: var(--text-color);
-    font-weight: 500;
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-  } */
-
-  /* .page-number:hover {
-    background-color: #e9ecef;
-    border-color: var(--primary-color);
-  } */
-
-  /* .page-number.active {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-    cursor: default;
-    font-weight: bold;
-    box-shadow: var(--shadow-light);
-  } */
-
-  /* .page-number.active:hover {
-    background-color: var(--primary-color);
-    color: white;
-  } */
-
-  /* .ellipsis {
-    padding: 0 5px;
-    color: #888;
-    font-size: 1.2em;
-    font-weight: bold;
-  } */
-
   @media (max-width: 768px) {
     .video-grid {
       grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -293,23 +199,6 @@ const breadcrumbs = [
     .category-header {
       padding: 30px 15px;
     }
-    /* Paginasi mobile juga dihapus */
-    /* .pagination-controls {
-      gap: 10px;
-      justify-content: space-between;
-    }
-    .pagination-button {
-      padding: 8px 15px;
-      font-size: 0.9em;
-    }
-    .page-numbers {
-      gap: 5px;
-    }
-    .page-number {
-      min-width: 35px;
-      height: 35px;
-      font-size: 0.9em;
-    } */
   }
 
   @media (max-width: 480px) {

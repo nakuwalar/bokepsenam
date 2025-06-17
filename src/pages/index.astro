@@ -2,24 +2,18 @@
 // src/pages/index.astro
 import Layout from '@layouts/BaseLayout.astro';
 import VideoCard from '@components/VideoCard.astro';
-import { slugify } from '@utils/slugify'; // Masih bisa berguna untuk hal lain, tapi tidak untuk paginasi lagi
+import { slugify } from '@utils/slugify';
 import { getAllVideos } from '@utils/videoData';
 
-// getStaticPaths tidak lagi membutuhkan paginate karena kita akan menampilkan semua video
 export async function getStaticPaths() {
-  // Hanya perlu mengembalikan satu path untuk halaman index utama
   return [{ params: {} }];
 }
 
-// Mendapatkan properti yang diperlukan secara langsung, tanpa 'page' dari paginate
-// Jika Anda masih ingin mengurutkan, lakukan di sini
 const allVideos = await getAllVideos();
 allVideos.sort((a, b) => parseInt(b.id) - parseInt(a.id));
 
-// currentVideos kini adalah semua video
 const currentVideos = allVideos;
 
-// Mendapatkan domain unik dari URL video untuk preconnect
 const allDomains = new Set<string>();
 currentVideos.forEach(video => {
   try {
@@ -30,15 +24,14 @@ currentVideos.forEach(video => {
 });
 const preconnectDomains = Array.from(allDomains);
 
-// Breadcrumb data - Sekarang hanya Beranda
 const breadcrumbs = [
   { name: 'Beranda', url: '/' },
 ];
 ---
 
 <Layout
-  title="Video Portal - Koleksi Video Terbaik" // Judul statis, tidak perlu halaman
-  description="Jelajahi koleksi video terbaru dan terpopuler dari berbagai kategori." // Deskripsi statis
+  title="Video Portal - Koleksi Video Terbaik"
+  description="Jelajahi koleksi video terbaru dan terpopuler dari berbagai kategori."
   preconnectDomains={preconnectDomains}
 >
   <main class="home-page">
@@ -57,7 +50,6 @@ const breadcrumbs = [
             <meta itemprop="position" content={(index + 1).toString()} />
           </li>
         ))}
-        {/* Tidak perlu lagi menampilkan halaman di breadcrumb */}
       </ol>
     </nav>
 
@@ -70,18 +62,13 @@ const breadcrumbs = [
       <h2>Video Terbaru</h2>
       <div class="video-grid">
         {currentVideos.length === 0 ? (
-          <p class="no-videos">Belum ada video yang tersedia.</p> {/* Pesan sedikit diubah */}
+          <p class="no-videos">Belum ada video yang tersedia.</p>
         ) : (
           currentVideos.map((video) => (
             <VideoCard video={video} />
           ))
         )}
       </div>
-
-      {/* Kontrol Paginasi Dihapus Sepenuhnya */}
-      {/* <nav class="pagination-controls" aria-label="Navigasi Halaman Video">
-        ... (kode paginasi sebelumnya) ...
-      </nav> */}
     </section>
   </main>
 </Layout>
@@ -190,90 +177,6 @@ const breadcrumbs = [
     padding: 50px 0;
   }
 
-  /* Gaya Paginasi Dihapus */
-  /* --- Gaya Paginasi --- */
-  /* .pagination-controls {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-top: 50px;
-    gap: 15px;
-    flex-wrap: wrap;
-  } */
-
-  /* .pagination-button {
-    display: inline-flex;
-    align-items: center;
-    padding: 10px 20px;
-    background-color: var(--primary-color);
-    color: white;
-    text-decoration: none;
-    border-radius: 5px;
-    font-weight: 500;
-    transition: background-color 0.2s ease-in-out, transform 0.2s ease;
-    box-shadow: var(--shadow-light);
-  } */
-
-  /* .pagination-button:hover {
-    background-color: #0056b3;
-    transform: translateY(-2px);
-  } */
-
-  /* .pagination-button.prev-button {
-    margin-right: auto;
-  } */
-
-  /* .pagination-button.next-button {
-    margin-left: auto;
-  } */
-
-  /* .page-numbers {
-    display: flex;
-    gap: 8px;
-  } */
-
-  /* .page-number {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-width: 40px;
-    height: 40px;
-    padding: 0 8px;
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    text-decoration: none;
-    color: var(--text-color);
-    font-weight: 500;
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-  } */
-
-  /* .page-number:hover {
-    background-color: #e9ecef;
-    border-color: var(--primary-color);
-  } */
-
-  /* .page-number.active {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-    cursor: default;
-    font-weight: bold;
-    box-shadow: var(--shadow-light);
-  } */
-
-  /* .page-number.active:hover {
-    background-color: var(--primary-color);
-    color: white;
-  } */
-
-  /* .ellipsis {
-    padding: 0 5px;
-    color: #888;
-    font-size: 1.2em;
-    font-weight: bold;
-  } */
-
   @media (max-width: 768px) {
     .video-grid {
       grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -285,23 +188,6 @@ const breadcrumbs = [
     .hero-section {
       padding: 30px 15px;
     }
-    /* Paginasi mobile juga dihapus */
-    /* .pagination-controls {
-      gap: 10px;
-      justify-content: space-between;
-    }
-    .pagination-button {
-      padding: 8px 15px;
-      font-size: 0.9em;
-    }
-    .page-numbers {
-      gap: 5px;
-    }
-    .page-number {
-      min-width: 35px;
-      height: 35px;
-      font-size: 0.9em;
-    } */
   }
 
   @media (max-width: 480px) {
