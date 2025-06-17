@@ -1,0 +1,192 @@
+---
+import Layout from '../layouts/BaseLayout.astro';
+import path from 'path';
+import fs from 'fs';
+import csv from 'csv-parser';
+import VideoCard from '../components/VideoCard.astro';
+import { slugify } from '../utils/slugify';
+
+interface VideoData {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  duration: string;
+  videoUrl: string;
+  category: string;
+}
+
+// getStaticPaths untuk menghasilkan halaman untuk setiap kategori unik
+export async function getStaticPaths() {
+  const results: VideoData[] = [];
+  const csvFilePath = path.resolve(process.cwd(), 'src/data/videos.csv');
+
+  await new Promise<void>((resolve, reject) => {
+    fs.createReadStream(csvFilePath)
+      .pipe(csv({ separator: ';' }))
+      .on('data', (data: VideoData) => results.push(data))
+      .on('end', () => {
+        resolve();
+      })
+      .on('error', (error) => {
+        reject(error);
+      });
+  });
+
+  // Dapatkan daftar kategori unik
+  const uniqueCategories = [...new Set(results.map((video) => video.category))];
+
+  return uniqueCategories.map((category) => ({
+    params: { category: slugify(category) },
+    props: { category, videos: results.filter((video) => slugify(video.category) === slugify(category)) },
+  }));
+}
+
+// Dapatkan parameter kategori dari URL
+const { category } = Astro.params;
+
+// Dapatkan data kategori dan video terkait dari props
+const { category: categoryName, videos } = Astro.props as { category: string; videos: VideoData[] };
+
+// Fallback jika props tidak tersedia
+const actualCategoryName = categoryName || (videos && videos.length > 0 ? videos[0].category : "Semua Kategori");
+---
+
+<Layout
+  title={`Kategori: ${actualCategoryName} | Video Portal`}
+  description={`Kumpulan video dalam kategori ${actualCategoryName}.`}
+>
+  <main class="category-page" itemscope itemtype="http://schema.org/CollectionPage">
+    <meta itemprop="name" content={`Video Kategori: ${actualCategoryName}`} />
+    <meta itemprop="description" content={`Kumpulan video dalam kategori ${actualCategoryName}.`} />
+    <meta itemprop="mainEntityOfPage" content={Astro.url.href} />
+
+    {/* Breadcrumb untuk Halaman Kategori */}
+    <nav class="breadcrumb" aria-label="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList">
+      <ol>
+        <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+          <a itemprop="item" href="/">
+            <span itemprop="name">Beranda</span>
+          </a>
+          <meta itemprop="position" content="1" />
+        </li>
+        <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+          <span class="separator">/</span>
+          <span itemprop="name">{actualCategoryName}</span>
+          <meta itemprop="position" content="2" />
+        </li>
+      </ol>
+    </nav>
+
+    <section class="category-header">
+      <h1 itemprop="about" content={actualCategoryName}>Kategori: {actualCategoryName}</h1>
+    </section>
+
+    <section class="video-grid-section">
+      <div class="video-grid" itemprop="hasPart" itemscope itemtype="http://schema.org/ItemList">
+        {videos.length === 0 ? (
+          <p class="no-videos">Tidak ada video dalam kategori ini.</p>
+        ) : (
+          videos.map((video, index) => (
+            <div itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+              <meta itemprop="position" content={(index + 1).toString()} />
+              <VideoCard video={video} />
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  /* Gaya CSS untuk breadcrumb */
+  .breadcrumb {
+    margin-bottom: 20px;
+    font-size: 0.9em;
+    color: #666;
+  }
+
+  .breadcrumb ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .breadcrumb li {
+    display: flex;
+    align-items: center;
+  }
+
+  .breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumb .separator {
+    margin: 0 8px;
+    color: #999;
+  }
+
+  /* Gaya CSS lainnya tidak berubah */
+  .category-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .category-header {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  .category-header h1 {
+    font-size: clamp(2em, 4vw, 3em);
+    color: #333;
+  }
+
+  .video-grid-section h2 {
+    font-size: clamp(1.8em, 3.5vw, 2.2em);
+    color: #333;
+    margin-bottom: 25px;
+    text-align: center;
+  }
+
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+  }
+
+  .no-videos {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 1.2em;
+    color: #999;
+    padding: 50px 0;
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 768px) {
+    .video-grid {
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    .category-page {
+      padding: 15px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .video-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

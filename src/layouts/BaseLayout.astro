@@ -1,193 +1,297 @@
 ---
-// src/layouts/BaseLayout.astro
-import type { VideoData } from '@utils/videoData';
-
 interface Props {
   title: string;
   description: string;
+  image?: string;
   preconnectDomains?: string[];
 }
 
-const { title, description, preconnectDomains = [] } = Astro.props;
+const { title, description, image, preconnectDomains = [] } = Astro.props;
+
+// Default image jika tidak disediakan
+const defaultImage = '/default-seo-image.jpg'; // Pastikan Anda memiliki gambar ini di folder public
+const ogImage = image ? new URL(image, Astro.site).href : new URL(defaultImage, Astro.site).href;
+const canonicalUrl = Astro.url.href;
 ---
 
 <!doctype html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content={description} />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+
+    {/* SEO Tags */}
     <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
 
-    {preconnectDomains.map(domain => <link rel="preconnect" href={domain} />)}
+    {/* Open Graph / Facebook */}
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
 
-    </head>
+    {/* Twitter */}
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={canonicalUrl} />
+    <meta property="twitter:title" content={title} />
+    <meta property="twitter:description" content={description} />
+    <meta property="twitter:image" content={ogImage} />
+
+    {/* Preconnect untuk domain eksternal */}
+    {preconnectDomains.map((domain) => (
+      <link rel="preconnect" href={domain} />
+    ))}
+
+    {/* Jika Astro.site tidak disetel (misal di localhost), sembunyikan prefetch/prerender */}
+    {Astro.site && (
+      <>
+        <link rel="dns-prefetch" href={Astro.site} />
+        <link rel="preload" href="/fonts/your-font-regular.woff2" as="font" type="font/woff2" crossorigin />
+      </>
+    )}
+  </head>
   <body>
-    <header class="site-header">
-      <div class="container">
-        <a href="/" class="logo">Video Portal</a>
-        <nav class="main-nav">
-          <ul>
-            <li><a href="/">Beranda</a></li>
-            <li><a href="/kategori/">Kategori</a></li>
-          </ul>
-        </nav>
-      </div>
+    <header>
+      <nav>
+        <a href="/" class="site-title">Bokep Sayang</a>
+        <ul>
+          <li><a href="/">Beranda</a></li>
+          <li><a href="/category">Kategori</a></li>
+          {/* Formulir Pencarian di Navigasi */}
+          <li class="search-item">
+            <form action="/cari/" method="get" class="search-form" id="searchForm">
+              <input
+                type="text"
+                name="q"
+                placeholder="Cari video..."
+                aria-label="Cari video"
+                class="search-input"
+              />
+              <button type="submit" class="search-button">Cari</button>
+            </form>
+          </li>
+        </ul>
+      </nav>
     </header>
-
     <slot />
-
-    <footer class="site-footer">
-      <div class="container">
-        <p>&copy; {new Date().getFullYear()} Video Portal. All rights reserved.</p>
-        <p>Dibuat dengan <a href="https://astro.build/" target="_blank" rel="noopener noreferrer">Astro</a>.</p>
-      </div>
+    <footer>
+      <p>&copy; {new Date().getFullYear()} Bokep Sayang. All rights reserved.</p>
     </footer>
+        <script is:inline>
+      // Fungsi untuk mengkonversi string menjadi slug yang SEO-friendly
+      function slugify(text) {
+        return text
+          .toString()
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, '-')     // Ganti spasi dengan tanda hubung
+          .replace(/[^\w-]+/g, '')  // Hapus semua kecuali kata dan tanda hubung
+          .replace(/--+/g, '-')     // Ganti tanda hubung ganda dengan satu tanda hubung
+          .replace(/^-+/, '')       // Hapus tanda hubung dari awal
+          .replace(/-+$/, '');      // Hapus tanda hubung dari akhir
+      }
+
+      // Ambil formulir pencarian
+      const searchForm = document.getElementById('searchForm');
+      if (searchForm) {
+        searchForm.addEventListener('submit', function(event) {
+          event.preventDefault(); // Mencegah pengiriman formulir default
+
+          const input = searchForm.querySelector('input[name="q"]');
+          const query = input ? input.value.trim() : '';
+
+          if (query) {
+            const searchSlug = slugify(query);
+            window.location.href = `/cari/${searchSlug}`; // Arahkan ke URL yang bersih
+          } else {
+            // Jika input kosong, arahkan ke halaman pencarian umum (tanpa kueri)
+            window.location.href = '/cari/';
+          }
+        });
+      }
+    </script>
+
   </body>
 </html>
 
 <style is:global>
   :root {
     --primary-color: #007bff;
+    --secondary-color: #6c757d;
     --accent-color: #28a745;
-    --secondary-color: #6c757d; /* Digunakan untuk kategori header */
-    --text-color: #333;
-    --background-color: #f8f9fa;
+    --background-color: #f4f7f6;
+    --text-color: #343a40;
+    --border-color: #e9ecef;
     --card-bg: #ffffff;
-    --border-color: #e0e0e0;
-    --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.05);
-    --shadow-medium: 0 5px 15px rgba(0, 0, 0, 0.1);
-  }
-
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.6;
-    color: var(--text-color);
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
     background-color: var(--background-color);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    color: var(--text-color);
+    line-height: 1.6;
   }
 
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-  }
-
-  .site-header {
+  /* Header and Navigation */
+  header {
     background-color: var(--primary-color);
     color: white;
-    padding: 20px 0;
+    padding: 15px 0;
     box-shadow: var(--shadow-medium);
-    z-index: 100;
-    position: sticky;
-    top: 0;
-    width: 100%;
   }
 
-  .site-header .container {
+  nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
   }
 
-  .site-header .logo {
-    color: white;
-    text-decoration: none;
+  .site-title {
     font-size: 1.8em;
     font-weight: bold;
+    color: white;
+    text-decoration: none;
+    margin-right: 20px;
   }
 
-  .main-nav ul {
+  nav ul {
     list-style: none;
+    margin: 0;
+    padding: 0;
     display: flex;
-    gap: 25px;
+    align-items: center;
+    flex-wrap: wrap; /* Allow list items to wrap */
   }
 
-  .main-nav a {
+  nav ul li {
+    margin-left: 25px;
+  }
+
+  nav ul li a {
     color: white;
     text-decoration: none;
     font-weight: 500;
-    transition: color 0.3s ease;
+    transition: color 0.2s ease-in-out;
+    padding: 5px 0;
   }
 
-  .main-nav a:hover {
-    color: var(--accent-color);
+  nav ul li a:hover {
+    color: rgba(255, 255, 255, 0.8);
   }
 
-  .site-footer {
-    background-color: #343a40;
+  /* Search Form Styles */
+  .search-item {
+    margin-left: 30px; /* Adjust margin for search form */
+  }
+
+  .search-form {
+    display: flex;
+    gap: 5px;
+  }
+
+  .search-input {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.2);
     color: white;
+    font-size: 0.9em;
+    width: 150px; /* Default width */
+    transition: width 0.3s ease-in-out, background-color 0.2s;
+  }
+
+  .search-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .search-input:focus {
+    width: 200px; /* Expand on focus */
+    background-color: rgba(255, 255, 255, 0.3);
+    outline: none;
+    border-color: white;
+  }
+
+  .search-button {
+    padding: 8px 15px;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease-in-out;
+  }
+
+  .search-button:hover {
+    background-color: #218838; /* Darker shade of accent */
+  }
+
+
+  /* Footer */
+  footer {
     text-align: center;
-    padding: 30px 0;
+    padding: 20px;
     margin-top: 50px;
-  }
-
-  .site-footer p {
+    background-color: var(--secondary-color);
+    color: white;
     font-size: 0.9em;
-    margin-bottom: 5px;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
   }
 
-  .site-footer a {
-    color: var(--primary-color);
-    text-decoration: none;
-    transition: color 0.2s ease;
-  }
+  /* Responsive Navigation */
+  @media (max-width: 768px) {
+    nav {
+      flex-direction: column;
+      align-items: flex-start;
+    }
 
-  .site-footer a:hover {
-    color: var(--accent-color);
-    text-decoration: underline;
-  }
+    .site-title {
+      margin-bottom: 15px;
+    }
 
-  /* Global link styles */
-  a {
-    color: var(--primary-color);
-    text-decoration: none;
-  }
+    nav ul {
+      flex-direction: column;
+      width: 100%;
+      align-items: flex-start;
+    }
 
-  a:hover {
-    text-decoration: underline;
-  }
+    nav ul li {
+      margin-left: 0;
+      margin-bottom: 10px;
+      width: 100%; /* Make list items take full width */
+    }
 
-  /* Breadcrumb styles */
-  .breadcrumb {
-    margin-bottom: 20px;
-    font-size: 0.9em;
-    color: #666;
-  }
+    nav ul li a {
+      display: block; /* Make links fill the width */
+      padding: 5px 0;
+    }
 
-  .breadcrumb ol {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-  }
+    .search-item {
+        margin-left: 0; /* Reset margin */
+        width: 100%;
+        margin-top: 10px; /* Space between links and search */
+    }
 
-  .breadcrumb li {
-    display: flex;
-    align-items: center;
-  }
+    .search-form {
+        width: 100%;
+        justify-content: center; /* Center search elements */
+    }
 
-  .breadcrumb a {
-    color: var(--primary-color);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .breadcrumb a:hover {
-    text-decoration: underline;
-  }
-
-  .breadcrumb .separator {
-    margin: 0 8px;
-    color: #999;
+    .search-input {
+        width: 100%; /* Make search input full width */
+        max-width: 300px; /* Limit max width for better appearance */
+    }
   }
 </style>

@@ -1,0 +1,110 @@
+/* src/styles/global.css */
+
+/* --- Variabel CSS (Custom Properties) --- */
+:root {
+  --primary-color: #007bff; /* Biru cerah untuk aksen */
+  --primary-dark-color: #0056b3; /* Biru lebih gelap untuk hover */
+  --text-color: #333; /* Warna teks utama */
+  --text-light-color: #666; /* Warna teks sekunder/lebih terang */
+  --background-color: #f8f8f8; /* Warna latar belakang halaman */
+  --surface-color: #fff; /* Warna latar belakang untuk kartu/konten */
+  --border-color: #eee; /* Warna border halus */
+  --header-height: 60px; /* Tinggi header */
+  --font-family-base: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-heading: 'Poppins', sans-serif; /* Opsional: font untuk judul */
+  --max-width-content: 1200px; /* Lebar maksimum konten utama */
+}
+
+/* --- CSS Reset Dasar --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box; /* Model box-sizing yang konsisten */
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family-base);
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  -webkit-font-smoothing: antialiased; /* Perhalus rendering font di WebKit */
+  -moz-osx-font-smoothing: grayscale; /* Perhalus rendering font di Firefox */
+}
+
+/* --- Gaya Tipografi Dasar --- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-heading);
+  margin-top: 0;
+  margin-bottom: 0.5em;
+  line-height: 1.2;
+  font-weight: 700; /* Lebih tebal untuk judul */
+  color: var(--text-color);
+}
+
+h1 { font-size: 2.5em; } /* Ukuran font untuk H1 */
+h2 { font-size: 2em; }
+h3 { font-size: 1.75em; }
+h4 { font-size: 1.5em; }
+h5 { font-size: 1.25em; }
+h6 { font-size: 1em; }
+
+p {
+  margin-top: 0;
+  margin-bottom: 1em;
+  color: var(--text-light-color);
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+  color: var(--primary-dark-color);
+  text-decoration: underline;
+}
+
+/* --- Utilitas CSS --- */
+
+/* Untuk elemen yang hanya terlihat oleh screen reader (aksesibilitas) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Kelas untuk centering konten utama */
+.container {
+  max-width: var(--max-width-content);
+  margin: 0 auto;
+  padding: 0 20px; /* Padding di sisi untuk layar kecil */
+}
+
+/* --- Responsivitas Umum --- */
+@media (max-width: 768px) {
+  h1 { font-size: 2em; }
+  h2 { font-size: 1.75em; }
+  h3 { font-size: 1.5em; }
+  .container {
+    padding: 0 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 1.8em; }
+  h2 { font-size: 1.5em; }
+  h3 { font-size: 1.2em; }
+  body {
+    font-size: 0.95em;
+  }
+}

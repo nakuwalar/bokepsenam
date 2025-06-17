@@ -1,5 +1,5 @@
 {
-  "name": "video-portal",
+  "name": "viastro",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
@@ -10,10 +10,16 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^4.11.3",
-    "csv-parser": "^3.0.0"
+    "@astrojs/sitemap": "^3.4.1",
+    "@astrojs/ts-plugin": "^1.8.4",
+    "@types/node-fetch": "^2.6.12",
+    "astro": "^4.11.5",
+    "csv-parser": "^3.2.0",
+    "node-fetch": "^2.7.0",
+    "sharp": "^0.34.2"
   },
   "devDependencies": {
-    "@types/csv-parser": "^1.2.2"
+    "@types/node": "^20.14.9",
+    "typescript": "^5.5.3"
   }
 }

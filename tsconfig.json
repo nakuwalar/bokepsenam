@@ -1,32 +1,26 @@
 {
+  "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@layouts/*": ["src/layouts/*"],
-      "@components/*": ["src/components/*"],
-      "@utils/*": ["src/utils/*"],
-      "@data/*": ["src/data/*"]
+      "@/*": ["./src/*"]
     },
-    "allowJs": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
+    // Opsi ini penting jika Anda menggunakan framework UI berbasis JSX
+    // seperti React, Preact, atau SolidJS di dalam proyek Astro Anda.
+    // Jika tidak, Anda bisa menghapusnya atau menggunakan "preserve".
     "jsx": "react-jsx",
-    "jsxImportSource": "react",
-    "lib": ["es2022", "dom", "dom.iterable"],
-    "moduleResolution": "node",
-    "module": "es2022",
-    "noEmit": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "target": "es2022"
-  },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.astro",
-    "src/**/*.js",
-    "src/**/*.jsx"
-  ]
+    "jsxImportSource": "react", // Ganti dengan "preact" atau "solid-js" jika berbeda
+
+    // Plugin untuk mengintegrasikan TypeScript dengan fitur-fitur Astro
+    "plugins": [
+      {
+        "name": "@astrojs/ts-plugin"
+      }
+    ],
+    "lib": ["dom", "es2020"], // Menambahkan tipe DOM dan fitur ES2020
+    "esModuleInterop": true, // Membantu impor/ekspor modul CommonJS dan ES Module
+    "forceConsistentCasingInFileNames": true, // Mencegah inkonsistensi nama file
+    "skipLibCheck": true, // Melewati pemeriksaan tipe file deklarasi (node_modules)
+    "resolveJsonModule": true // Mengizinkan impor file JSON
+  }
 }

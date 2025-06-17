@@ -1,0 +1,286 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+import path from 'path';
+import fs from 'fs';
+import csv from 'csv-parser';
+import { slugify } from '../../utils/slugify';
+
+interface VideoData {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  duration: string;
+  videoUrl: string;
+  category: string;
+}
+
+interface CategoryData {
+  name: string;
+  slug: string;
+  videoCount: number;
+  thumbnail?: string; // Menambahkan properti thumbnail (opsional, jika tidak semua kategori punya)
+}
+
+// Fungsi untuk mendapatkan semua kategori unik dari CSV
+async function getAllCategories(): Promise<CategoryData[]> {
+  const allVideos: VideoData[] = [];
+  const csvFilePath = path.resolve(process.cwd(), 'src/data/videos.csv');
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      fs.createReadStream(csvFilePath)
+        .pipe(csv({ separator: ';' })) // Sesuaikan separator jika perlu
+        .on('data', (data: VideoData) => allVideos.push(data))
+        .on('end', () => resolve())
+        .on('error', (error) => {
+          console.error("Error reading CSV for categories:", error);
+          reject(error);
+        });
+    });
+  } catch (e) {
+    console.error("Failed to load videos for category index:", e);
+    return []; // Return empty array on error
+  }
+
+  // Map untuk menyimpan video pertama per kategori untuk thumbnail
+  const categoryThumbnails = new Map<string, string>();
+  // Map untuk menghitung video per kategori
+  const categoryCounts = new Map<string, number>();
+
+  allVideos.forEach(video => {
+    const categoryName = video.category.trim();
+    if (categoryName) {
+      // Hitung jumlah video
+      categoryCounts.set(categoryName, (categoryCounts.get(categoryName) || 0) + 1);
+
+      // Simpan thumbnail video pertama untuk kategori ini (jika belum ada)
+      if (!categoryThumbnails.has(categoryName) && video.thumbnail) {
+        categoryThumbnails.set(categoryName, video.thumbnail);
+      }
+    }
+  });
+
+  // Konversi map ke array CategoryData
+  const categories: CategoryData[] = Array.from(categoryCounts.entries()).map(([name, count]) => ({
+    name: name,
+    slug: slugify(name),
+    videoCount: count,
+    thumbnail: categoryThumbnails.get(name) || '/placeholder-category.jpg', // Default thumbnail jika tidak ditemukan
+  }));
+
+  // Urutkan kategori berdasarkan nama
+  categories.sort((a, b) => a.name.localeCompare(b.name));
+
+  return categories;
+}
+
+const categories = await getAllCategories();
+
+// Breadcrumb data
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Category', url: '/category' },
+];
+---
+
+<Layout
+  title="Semua Kategori Video | Bokep Sayang"
+  description="Jelajahi daftar lengkap kategori video yang tersedia di Bokep Sayang."
+>
+  <main class="category-index-page">
+    <nav class="breadcrumb" aria-label="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList">
+      <ol>
+        {breadcrumbs.map((item, index) => (
+          <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+            {index > 0 && <span class="separator">/</span>}
+            {item.url ? (
+              <a itemprop="item" href={item.url}>
+                <span itemprop="name">{item.name}</span>
+              </a>
+            ) : (
+              <span itemprop="name">{item.name}</span>
+            )}
+            <meta itemprop="position" content={(index + 1).toString()} />
+          </li>
+        ))}
+      </ol>
+    </nav>
+
+    <section class="category-index-header">
+      <h1>Jelajahi Kategori Video Bokep Sayang</h1>
+      <p>Temukan video favorit Anda berdasarkan topik Bokep Sayang.</p>
+    </section>
+
+    <section class="category-list-section">
+      {categories.length === 0 ? (
+        <p class="no-categories">Tidak ada kategori yang ditemukan.</p>
+      ) : (
+        <div class="category-grid">
+          {categories.map((category) => (
+            <a href={`/${category.slug}`} class="category-card">
+              {/* Tambahkan Gambar Thumbnail di sini */}
+              <div class="category-thumbnail-wrapper">
+                <img
+                  src={category.thumbnail}
+                  alt={`Thumbnail kategori ${category.name}`}
+                  loading="lazy"
+                  width="200"
+                  height="112"
+                />
+              </div>
+              <div class="category-info">
+                <h3>{category.name}</h3>
+                <p>{category.videoCount} video</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .category-index-page {
+    max-width: 1000px;
+    margin: 30px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  }
+
+  .category-index-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .category-index-header h1 {
+    font-size: clamp(2em, 4vw, 3em);
+    color: #333;
+    margin-bottom: 10px;
+  }
+
+  .category-index-header p {
+    font-size: clamp(1em, 2vw, 1.2em);
+    color: #666;
+  }
+
+  .category-list-section {
+    margin-top: 30px;
+  }
+
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+  }
+
+  .category-card {
+    display: flex;
+    flex-direction: column; /* Mengatur item secara vertikal */
+    align-items: center; /* Mengatur item secara horizontal ke tengah */
+    padding: 15px; /* Kurangi padding untuk memberi ruang pada gambar */
+    background-color: #f0f8ff; /* Light blue background */
+    border: 1px solid #e0efff;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #333;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    text-align: center;
+    overflow: hidden; /* Pastikan gambar tidak meluap */
+  }
+
+  .category-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    background-color: #e6f2ff; /* Slightly darker on hover */
+  }
+
+  /* Gaya untuk Wrapper Thumbnail */
+  .category-thumbnail-wrapper {
+    width: 100%; /* Lebar penuh card */
+    padding-bottom: 56.25%; /* Rasio aspek 16:9 (tinggi 56.25% dari lebar) */
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px; /* Sudut sedikit membulat untuk gambar */
+    margin-bottom: 15px; /* Jarak antara gambar dan teks */
+    background-color: #eee; /* Placeholder background */
+  }
+
+  .category-thumbnail-wrapper img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Pastikan gambar mengisi ruang tanpa terdistorsi */
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .category-card:hover .category-thumbnail-wrapper img {
+    transform: scale(1.05); /* Efek zoom in pada hover */
+  }
+
+  .category-info {
+    width: 100%; /* Pastikan info memenuhi lebar card */
+    padding: 0 5px; /* Sedikit padding horizontal untuk teks */
+  }
+
+  .category-card h3 {
+    font-size: 1.2em; /* Sedikit lebih kecil agar rapi */
+    margin-bottom: 5px; /* Kurangi margin */
+    color: var(--primary-color);
+    word-break: break-word; /* Mencegah teks terlalu panjang meluap */
+  }
+
+  .category-card p {
+    font-size: 0.85em; /* Lebih kecil untuk info video count */
+    color: #555;
+    margin: 0;
+  }
+
+  .no-categories {
+    text-align: center;
+    font-size: 1.2em;
+    color: #999;
+    padding: 50px 0;
+  }
+
+  /* Gaya Breadcrumb */
+  .breadcrumb {
+    margin-bottom: 20px;
+    font-size: 0.9em;
+    color: #666;
+  }
+
+  .breadcrumb ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .breadcrumb li {
+    display: flex;
+    align-items: center;
+  }
+
+  .breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumb .separator {
+    margin: 0 8px;
+    color: #999;
+  }
+
+  @media (max-

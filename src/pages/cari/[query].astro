@@ -1,0 +1,293 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+import path from 'path';
+import fs from 'fs';
+import csv from 'csv-parser';
+import VideoCard from '../../components/VideoCard.astro';
+import { slugify } from '../../utils/slugify';
+
+interface VideoData {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  duration: string;
+  videoUrl: string;
+  category: string;
+}
+
+// Fungsi helper untuk membaca semua video
+async function getAllVideos(): Promise<VideoData[]> {
+  const results: VideoData[] = [];
+  const csvFilePath = path.resolve(process.cwd(), 'src/data/videos.csv');
+
+  return new Promise((resolve, reject) => {
+    fs.createReadStream(csvFilePath)
+      .pipe(csv({ separator: ';' }))
+      .on('data', (data: VideoData) => results.push(data))
+      .on('end', () => resolve(results))
+      .on('error', (error) => {
+        console.error("Error reading CSV for search:", error);
+        reject(error);
+      });
+  });
+}
+
+// getStaticPaths untuk rute dinamis pencarian
+export async function getStaticPaths() {
+  // Dalam kasus pencarian, kita tidak bisa menghasilkan semua kemungkinan kueri
+  // secara statis karena itu tidak terbatas. Astro akan jatuh kembali ke
+  // SSR (Server-Side Rendering) untuk rute dinamis yang tidak cocok dengan path statis.
+  // Oleh karena itu, kita tidak perlu mengembalikan path di sini untuk pencarian dinamis.
+  // Astro akan membiarkan kita mengakses params.query pada waktu build (jika ingin pre-render)
+  // atau pada waktu permintaan (default jika tidak ada paths).
+
+  // Untuk memastikan bahwa tidak ada halaman hasil pencarian yang pre-rendered
+  // dengan konten kosong (yang buruk untuk SEO), kita bisa mengembalikan array kosong.
+  return [];
+}
+
+
+const { query } = Astro.params; // Dapatkan kueri dari URL
+
+// Sanitasi kueri untuk pencarian
+const decodedQuery = decodeURIComponent(query || '').replace(/-/g, ' '); // Ganti hyphen dengan spasi
+const normalizedQuery = decodedQuery.toLowerCase().trim();
+
+let searchResults: VideoData[] = [];
+let allVideos: VideoData[] = [];
+
+try {
+  allVideos = await getAllVideos();
+
+  if (normalizedQuery) {
+    searchResults = allVideos.filter(video =>
+      video.title.toLowerCase().includes(normalizedQuery) ||
+      video.description.toLowerCase().includes(normalizedQuery) ||
+      video.category.toLowerCase().includes(normalizedQuery)
+    );
+  }
+} catch (e) {
+  console.error("Failed to perform search:", e);
+  // Tangani error, mungkin tampilkan pesan di UI
+}
+
+// Aturan SEO:
+// 1. Jika tidak ada kueri atau hasilnya kosong, tambahkan meta noindex.
+// 2. Judul dan deskripsi disesuaikan dengan kueri.
+const isNoIndex = !normalizedQuery || searchResults.length === 0;
+
+const pageTitle = normalizedQuery ? `Hasil Pencarian untuk "${normalizedQuery}" | Video Portal` : "Pencarian Video | Video Portal";
+const pageDescription = normalizedQuery
+  ? `Menampilkan video yang relevan dengan "${normalizedQuery}". Ditemukan ${searchResults.length} video.`
+  : "Gunakan fitur pencarian untuk menemukan video menarik.";
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href; // URL kanonis untuk halaman ini
+
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+>
+  <head>
+    {/* Canonical URL */}
+    <link rel="canonical" href={canonicalUrl} />
+    {/* Noindex/Nofollow jika tidak ada kueri atau hasil */}
+    {isNoIndex && <meta name="robots" content="noindex, nofollow" />}
+  </head>
+  <main class="search-page">
+    <nav class="breadcrumb" aria-label="breadcrumb" itemscope itemtype="http://schema.org/BreadcrumbList">
+      <ol>
+        <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+          <a itemprop="item" href="/">
+            <span itemprop="name">Beranda</span>
+          </a>
+          <meta itemprop="position" content="1" />
+        </li>
+        <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+          <span class="separator">/</span>
+          <span itemprop="name">Pencarian</span>
+          <meta itemprop="position" content="2" />
+        </li>
+        {normalizedQuery && (
+            <li itemprop="itemListElement" itemscope itemtype="http://schema.org/ListItem">
+                <span class="separator">/</span>
+                <span itemprop="name">"{decodedQuery}"</span>
+                <meta itemprop="position" content="3" />
+            </li>
+        )}
+      </ol>
+    </nav>
+
+    <section class="search-results-header">
+      {normalizedQuery ? (
+        <h1>Hasil Pencarian untuk: "{decodedQuery}"</h1>
+      ) : (
+        <h1>Silakan masukkan kata kunci pencarian</h1>
+      )}
+      <p>Ditemukan {searchResults.length} video.</p>
+      {/* Formulir pencarian duplikat (opsional) untuk kemudahan di halaman hasil */}
+      <form action="/cari/" method="get" class="search-form-page">
+        <input
+          type="text"
+          name="q"
+          placeholder="Cari lagi..."
+          value={decodedQuery}
+          aria-label="Cari lagi"
+          class="search-input-page"
+        />
+        <button type="submit" class="search-button-page">Cari</button>
+      </form>
+    </section>
+
+    <section class="video-grid-section">
+      <div class="video-grid">
+        {searchResults.length === 0 ? (
+          <p class="no-videos">Tidak ada video yang cocok dengan pencarian Anda.</p>
+        ) : (
+          searchResults.map((video) => (
+            <VideoCard video={video} />
+          ))
+        )}
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .search-page {
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  }
+
+  .search-results-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .search-results-header h1 {
+    font-size: clamp(2em, 4vw, 3em);
+    color: #333;
+    margin-bottom: 10px;
+  }
+
+  .search-results-header p {
+    font-size: clamp(1em, 2vw, 1.2em);
+    color: #666;
+    margin-bottom: 20px;
+  }
+
+  .search-form-page {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  .search-input-page {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1em;
+    width: clamp(200px, 50%, 400px); /* Responsive width */
+  }
+
+  .search-button-page {
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s ease-in-out;
+  }
+
+  .search-button-page:hover {
+    background-color: #0056b3;
+  }
+
+  .video-grid-section {
+    margin-top: 30px;
+  }
+
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+  }
+
+  .no-videos {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 1.2em;
+    color: #999;
+    padding: 50px 0;
+  }
+
+  /* Gaya Breadcrumb (salin dari BaseLayout atau tempat lain jika sudah ada) */
+  .breadcrumb {
+    margin-bottom: 20px;
+    font-size: 0.9em;
+    color: #666;
+  }
+
+  .breadcrumb ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .breadcrumb li {
+    display: flex;
+    align-items: center;
+  }
+
+  .breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumb .separator {
+    margin: 0 8px;
+    color: #999;
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 768px) {
+    .video-grid {
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    .search-page {
+      padding: 15px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .video-grid {
+      grid-template-columns: 1fr;
+    }
+    .search-form-page {
+      flex-direction: column;
+      gap: 10px;
+    }
+    .search-input-page, .search-button-page {
+      width: 100%;
+      max-width: none;
+    }
+  }
+</style>
