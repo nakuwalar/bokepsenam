@@ -14,6 +14,7 @@ export interface VideoData {
   embedUrl: string;
   tags: string; // Tipe data diubah menjadi string
   previewUrl?: string;
+  duration?: string;
 }
 
 export async function getAllVideos(): Promise<VideoData[]> {

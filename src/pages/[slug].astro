@@ -6,7 +6,7 @@ import VideoCard from '../components/VideoCard.astro';
 import { getAllVideos, type VideoData } from '../utils/data';
 import { slugify } from '../utils/slugify';
 import { nama, url, terbit } from '../utils/site.ts';
-
+import { formatSecondsToISO8601 } from '../../utils/formatters';
 export const prerender = true;
 
 export async function getStaticPaths() {
@@ -18,7 +18,7 @@ export async function getStaticPaths() {
 }
 
 const { video, allVideos } = Astro.props;
-
+const isoDuration = formatSecondsToISO8601(video.duration);
 const numberOfRelatedVideos = 16;
 let relatedVideos: VideoData[] = []; // Gunakan `let` karena akan diisi bertahap
 
@@ -161,6 +161,7 @@ const schemaVideoObject = {
   "uploadDate": datePublished,
   "embedUrl": video.embedUrl,
   "thumbnailUrl": video.thumbnail,
+  "duration": `${isoDuration}`,
   "publisher": {
     "@type": "Organization",
     "name": nama,
